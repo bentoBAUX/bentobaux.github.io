@@ -2,7 +2,7 @@
 
 - type: github
   icon: "fab fa-github"
-  url: "https://github.com/bentobaux"  
+  url: "https://github.com/bentobaux"
 
 - type: linkedin
   icon: "fab fa-linkedin"
@@ -16,8 +16,8 @@
 #   icon: "fab fa-instagram"
 #   url: "https://www.instagram.com/bentobaux/"
 
-- type: email
-  icon: "fas fa-envelope"
-  url: "mailto:bennettpoh@gmail.com"
-  noblank: true  # Open link in the current tab
+# - type: email
+#   icon: "fas fa-envelope"
+#   url: "mailto:bennettpoh@gmail.com"
+#   noblank: true  # Open link in the current tab
 
