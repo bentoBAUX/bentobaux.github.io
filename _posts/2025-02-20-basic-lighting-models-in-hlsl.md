@@ -31,7 +31,6 @@ in code. Feel free to click on the image below to watch the demo video before we
     - [Toon Shading](#6-toon-shading)
     - [Oren-Nayar](#7-oren-nayar)
     - [Cook-Torrance](#8-cook-torrance)
-- [License](#license)
 
 ## Overview
 
