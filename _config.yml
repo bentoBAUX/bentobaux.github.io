@@ -15,7 +15,7 @@ timezone: Europe/Berlin
 
 title: bentoBAUX # the main title
 
-tagline: Technical & 3D Artist # it will display as the subtitle
+tagline: Technical Artist | B.Sc. CS @ TUM # it will display as the subtitle
 
 description: >- # used by seo meta and the atom feed
   I'm Bennett Poh, a Technical Artist passionate about shaders, real-time graphics, and game development. Sharing insights on HLSL, Unity, and 3D rendering.
@@ -79,7 +79,7 @@ pageviews:
 #     light — Use the light color scheme
 #     dark — Use the dark color scheme
 #
-theme_mode: # [light | dark]
+theme_mode: dark # [light | dark]
 
 # The CDN endpoint for media resources.
 # Notice that once it is assigned, the CDN url
