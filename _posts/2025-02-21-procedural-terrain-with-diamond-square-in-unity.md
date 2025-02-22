@@ -8,6 +8,8 @@ tag: [terrain, unity, c#, procedural]
 math: true
 ---
 
+I explored and developed various lighting models in HLSL for Unity, ranging from the simple Lambertian shader to more complex microfacet-based models like Oren-Nayar and Cook-Torrance
+
 ![Preview](/assets/img/diamond-square/preview.jpg)
 
 In this project, I implemented the Diamond-Square Algorithm to generate procedural terrains in Unity. The algorithm is a fractal-based technique that creates realistic, randomised heightmaps, perfect for terrains in games and simulations.
