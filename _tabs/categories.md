@@ -1,6 +1,9 @@
 ---
 layout: categories
-title: Technical Blogs
+
 icon: fas fa-stream
 order: 2
+permalink: "/technical-blogs/"
 ---
+
+

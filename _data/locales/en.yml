@@ -11,7 +11,7 @@ layout:
 tabs:
   # format: <filename_without_extension>: <value>
   home: Home
-  categories: Technical Blogs
+  categories: Categories
   tags: Tags
   archives: Archives
   about: About
