@@ -2,7 +2,7 @@
 layout: page
 permalink: /game-projects/
 icon: fas fa-gamepad
-order: 1
+order: 2
 toc: true
 ---
 ---
