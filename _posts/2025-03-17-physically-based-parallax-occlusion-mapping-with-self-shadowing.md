@@ -47,14 +47,29 @@ At its core, parallax mapping distorts parts of a 2D texture based on how we vie
 
 With this information, we can now compute the displaced texture coordinates for each fragment (or pixel) rendered on the screen.
 
+Firstly, we must retrieve the depth value for the current pixel we are computing for. This can be simply done by sampling the depth map with the interpolated UVs for the pixel we are at.
 
+```hlsl
+float height = tex2D(heightMap, texCoords).r;
+```
 
 <details markdown="1">
   <summary>Expand to view the images</summary>
 
-  | **Blinn-Phong (Empirical)**                                                | **Cook-Torrance + Oren-Nayar (Physically Based)**                          |
-  | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-  | <img src="/assets/img/parallax/Simple/BrickBP-UP.jpg" width="800px"> | <img src="/assets/img/parallax/Simple/BrickCT-UP.jpg" width="800px"> |
+  <table class="table-custom">
+  <thead>
+    <tr>
+      <th>Blinn-Phong (Empirical)</th>
+      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="/assets/img/parallax/Simple/BrickBP-UP.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/Simple/BrickCT-UP.jpg" alt="Cook-Torrance"></td>
+    </tr>
+  </tbody>
+</table>
 
 </details>
 
@@ -63,9 +78,20 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque
 <details markdown="1">
   <summary>Expand to view the images</summary>
 
-  | **Blinn-Phong (Empirical)**                                                  | **Cook-Torrance + Oren-Nayar (Physically Based)**                            |
-  | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-  | <img src="/assets/img/parallax/Simple/BrickBP-SIDE.jpg" width="800px"> | <img src="/assets/img/parallax/Simple/BrickCT-SIDE.jpg" width="800px"> |
+  <table class="table-custom">
+  <thead>
+    <tr>
+      <th>Blinn-Phong (Empirical)</th>
+      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="/assets/img/parallax/Simple/BrickBP-SIDE.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/Simple/BrickCT-SIDE.jpg" alt="Cook-Torrance"></td>
+    </tr>
+  </tbody>
+</table>
 
 </details>
 
@@ -80,9 +106,20 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque
 <details markdown="1">
   <summary>Expand to view the images</summary>
 
-  | **Blinn-Phong (Empirical)**                                                | **Cook-Torrance + Oren-Nayar (Physically Based)**                          |
-  | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-  | <img src="/assets/img/parallax/POM/BrickBP-UP.jpg" width="800px"> | <img src="/assets/img/parallax/POM/BrickCT-UP.jpg" width="800px"> |
+  <table class="table-custom">
+  <thead>
+    <tr>
+      <th>Blinn-Phong (Empirical)</th>
+      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="/assets/img/parallax/POM/BrickBP-UP.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/POM/BrickCT-UP.jpg" alt="Cook-Torrance"></td>
+    </tr>
+  </tbody>
+</table>
 
 </details>
 
@@ -91,10 +128,20 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque
 <details markdown="1">
   <summary>Expand to view the images</summary>
 
-  | **Blinn-Phong (Empirical)**                                                | **Cook-Torrance + Oren-Nayar (Physically Based)**                          |
-  | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-  | <img src="/assets/img/parallax/POM/BrickBP-SIDE.jpg" width="800px"> | <img src="/assets/img/parallax/POM/BrickCT-SIDE.jpg" width="800px"> |
-
+  <table class="table-custom">
+  <thead>
+    <tr>
+      <th>Blinn-Phong (Empirical)</th>
+      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="/assets/img/parallax/POM/BrickBP-SIDE.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/POM/BrickCT-SIDE.jpg" alt="Cook-Torrance"></td>
+    </tr>
+  </tbody>
+</table>
 </details>
 
 --- 
@@ -107,9 +154,20 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque
 <details markdown="1">
   <summary>Expand to view the images</summary>
 
-  | **Blinn-Phong (Empirical)**                                                | **Cook-Torrance + Oren-Nayar (Physically Based)**                          |
-  | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-  | <img src="/assets/img/parallax/SelfShadow/BrickBP-UP.jpg" width="800px"> | <img src="/assets/img/parallax/SelfShadow/BrickCT-UP.jpg" width="800px"> |
+  <table class="table-custom">
+  <thead>
+    <tr>
+      <th>Blinn-Phong (Empirical)</th>
+      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="/assets/img/parallax/SelfShadow/BrickBP-UP.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/SelfShadow/BrickCT-UP.jpg" alt="Cook-Torrance"></td>
+    </tr>
+  </tbody>
+</table>
 
 </details>
 
