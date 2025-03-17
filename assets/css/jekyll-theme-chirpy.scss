@@ -1,0 +1,21 @@
+---
+---
+
+@use 'main
+{%- if jekyll.environment == 'production' -%}
+  .bundle
+{%- endif -%}
+';
+
+/* append your custom style below */
+
+table {
+  table-layout: fixed; /* Forces equal column widths */
+  width: 100%;
+}
+
+table img {
+  width: 100%; /* Ensures images take full width of their column */
+  height: auto;
+  object-fit: contain; /* Prevents stretching */
+}
