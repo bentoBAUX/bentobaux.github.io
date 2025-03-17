@@ -1,14 +1,12 @@
 ---
 layout: post
-title: Physically-Based-Parallax-Occlusion-Mapping-with-Self-Shadowing
+title: Physically Based Parallax Occlusion Mapping with Self Shadowing
 date: 2025-03-17 21:40 +0100
 author: bennett
 categories: [Computer Graphics & Simulations]
 tag: [parallax mapping, hlsl]
 math: true
 ---
-
-# Physically Based Parallax Occlusion Mapping with Self-Shadowing in Unity
 
 This project demonstrates Physically Based Parallax Occlusion Mapping (POM) with self-shadowing in **Unity's Built-In Render Pipeline using HLSL**. It compares three shading models: the Unity Standard Shader, Blinn-Phong (Empirical), and Cook-Torrance with Oren-Nayar (Physically Based). Each of these models also includes a simpler counterpart utilizing basic parallax mapping, highlighting the differences in depth perception and realism.
 
@@ -24,19 +22,18 @@ This page is designed to help solidify one's understanding of parallax mapping a
 
 ## Table of Contents
 
-- [Physically Based Parallax Occlusion Mapping with Self-Shadowing in Unity](#physically-based-parallax-occlusion-mapping-with-self-shadowing-in-unity)
-  - [Table of Contents](#table-of-contents)
-  - [Parallax Mapping](#parallax-mapping)
-    - [How It Works](#how-it-works)
-  - [Parallax Occlusion Mapping](#parallax-occlusion-mapping)
-    - [How It Works](#how-it-works-1)
-  - [Self Shadowing](#self-shadowing)
-    - [How It Works](#how-it-works-2)
-    - [Shader Parameters](#shader-parameters)
-  - [Performance Considerations](#performance-considerations)
-  - [Future Improvements](#future-improvements)
-  - [Credits](#credits)
-  - [License](#license)
+- [Table of Contents](#table-of-contents)
+- [Parallax Mapping](#parallax-mapping)
+  - [How It Works](#how-it-works)
+- [Parallax Occlusion Mapping](#parallax-occlusion-mapping)
+  - [How It Works](#how-it-works-1)
+- [Self Shadowing](#self-shadowing)
+  - [How It Works](#how-it-works-2)
+  - [Shader Parameters](#shader-parameters)
+- [Performance Considerations](#performance-considerations)
+- [Future Improvements](#future-improvements)
+- [Credits](#credits)
+- [License](#license)
 
 ## Parallax Mapping
 
