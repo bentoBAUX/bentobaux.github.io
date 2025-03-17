@@ -41,7 +41,11 @@ This page is designed to help solidify one's understanding of parallax mapping a
 
 Have you ever seen those mind-bending [optical illusion street art](https://d36tnp772eyphs.cloudfront.net/blogs/1/2019/06/Edgar-Mueller-street-mural-optical-illusion-of-ice-cliff.jpg) that turns a flat sidewalk into a deep dark abyss? From the right angle, it feels like you are standing on the edge of a cliff, staring into the gaping unknown. You might even ask a friend to hold the camera while you carefully step on the painted "debris" to strike a frightened pose for your Instagram. This is the concept behind parallax mapping - shifting textures to trick your eyes into seeing real depth.
 
-As mentioned, parallax mapping's core concept is distorting parts of the 2D texture applied to a surface based on how we are looking at it. This means we need to consider _how_ we are looking at the surface - are we staring straight down at it, or viewing it from an angle? This would be our **view angle**. We also need to know how much we would like a part of the texture to shift. In our case, we’ll be using a **depth map**, which is simply an inverse of the heightmap.
+This is the concept behind parallax mapping—shifting textures to trick your eyes into perceiving real depth.
+
+At its core, parallax mapping distorts parts of a 2D texture based on how we view the surface. Are we looking straight down at it, or viewing it from an angle? This is called the **view angle**. Another crucial element is determining how much different parts of the texture should shift. This information comes from the **depth map**, which is essentially the inverse of the height map.
+
+With this information, we can now compute the displaced texture coordinates for each fragment (or pixel) rendered on the screen.
 
 
 
