@@ -20,28 +20,30 @@ This page is designed to help solidify one's understanding of parallax mapping a
   <em><a href="https://youtu.be/XEO FwgZYHSo"> Watch the showcase on YouTube </a> </em>
 </p>
 
+<!-- omit in toc -->
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
-- [Parallax Mapping](#parallax-mapping)
-  - [How It Works](#how-it-works)
+- [Overview](#overview)
+- [Simple Parallax Mapping](#simple-parallax-mapping)
 - [Parallax Occlusion Mapping](#parallax-occlusion-mapping)
-  - [How It Works](#how-it-works-1)
 - [Self Shadowing](#self-shadowing)
-  - [How It Works](#how-it-works-2)
   - [Shader Parameters](#shader-parameters)
 - [Performance Considerations](#performance-considerations)
 - [Future Improvements](#future-improvements)
 - [Credits](#credits)
 - [License](#license)
 
-## Parallax Mapping
+---
 
-### How It Works  
+## Overview 
 
 Have you ever seen those mind-bending [optical illusion street art](https://d36tnp772eyphs.cloudfront.net/blogs/1/2019/06/Edgar-Mueller-street-mural-optical-illusion-of-ice-cliff.jpg) that turns a flat sidewalk into a deep dark abyss? From the right angle, it feels like you are standing on the edge of a cliff, staring into the gaping unknown. You might even ask a friend to hold the camera while you carefully step on the painted "debris" to strike a frightened pose for your Instagram. This is the concept behind parallax mapping - shifting textures to trick your eyes into seeing real depth.
 
 This is the concept behind parallax mapping—shifting textures to trick your eyes into perceiving real depth.
+
+---
+
+## Simple Parallax Mapping
 
 At its core, parallax mapping distorts parts of a 2D texture based on how we view the surface. Are we looking straight down at it, or viewing it from an angle? This is called the **view angle**. Another crucial element is determining how much different parts of the texture should shift. This information comes from the **depth map**, which is essentially the inverse of the height map.
 
@@ -50,7 +52,7 @@ With this information, we can now compute the displaced texture coordinates for 
 Firstly, we must **retrieve the depth value** for the current pixel we are computing for. This can be simply done by sampling the depth map with the interpolated UVs for the current pixel.
 
 ```hlsl
-float2 ParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, float heightScale)
+float2 ParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, float depthScale)
 {
   float depth = tex2D(depthMap, texCoords).r;
 }
@@ -100,6 +102,10 @@ float2 ParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, flo
 }
 ```
 
+Here is a visualisation of the approach that I have prepared to ease your understanding. The red ball is the new texel (texture element) that the viewer sees after computing the parallax shift. Notice how the vector $$p$$ (length of the red line) changes as we vary the viewing angle.
+
+** insert visualisation ** 
+
 Below are the results of this implementation in two different lighting models, **Blinn-Phong** and **Cook-Torrance + Oren-Nayar**. 
 
 <details markdown="1">
@@ -135,7 +141,6 @@ To solve this, we need to look into a more robust approach — **Parallax Occlus
 ---
 ## Parallax Occlusion Mapping
 
-### How It Works  
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque risus. Proin ullamcorper cursus arcu, imperdiet semper libero. Sed volutpat ante quis enim elementum, id vulputate quam gravida. Aliquam ullamcorper posuere sapien in dapibus. Proin laoreet odio a nulla fringilla gravida. Quisque vel felis sit amet dui ultricies blandit a eget lectus. Mauris sapien eros, consequat non felis ut, mattis vestibulum mi. Maecenas urna lectus, cursus eget laoreet vel, accumsan molestie mauris. Quisque sed nisl convallis, commodo lectus sit amet, pretium odio. Aenean vitae sapien et enim hendrerit ultricies quis nec ligula. Praesent eu risus nec diam volutpat suscipit.
 
@@ -182,8 +187,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque
 
 --- 
 ## Self Shadowing
-
-### How It Works  
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque risus. Proin ullamcorper cursus arcu, imperdiet semper libero. Sed volutpat ante quis enim elementum, id vulputate quam gravida. Aliquam ullamcorper posuere sapien in dapibus. Proin laoreet odio a nulla fringilla gravida. Quisque vel felis sit amet dui ultricies blandit a eget lectus. Mauris sapien eros, consequat non felis ut, mattis vestibulum mi. Maecenas urna lectus, cursus eget laoreet vel, accumsan molestie mauris. Quisque sed nisl convallis, commodo lectus sit amet, pretium odio. Aenean vitae sapien et enim hendrerit ultricies quis nec ligula. Praesent eu risus nec diam volutpat suscipit.
 
