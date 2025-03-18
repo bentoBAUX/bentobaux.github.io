@@ -14,7 +14,7 @@ This page is designed to help solidify one's understanding of parallax mapping a
 
 <p align="center">
   
-    <img src="/assets/img/parallax/GIF.gif" alt="Example showcase GIF" />
+    <img src="/assets/img/parallax/GIF.gif" alt="Example showcase GIF"/>
   
   <br>
   <em><a href="https://youtu.be/XEO FwgZYHSo"> Watch the showcase on YouTube </a> </em>
@@ -59,7 +59,8 @@ float2 ParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, flo
 ```
 We can now calculate the shift in the form of a vector $$p$$, which depends on the viewing angle and the depth value. The key idea is to **increase the shift when viewing the surface at an angle, and reduce it when looking straight down**. To understand this better, let's analyse how $$viewDir$$ behaves.
 
-** Insert visualisation for how viewDir changes ** 
+<img src="/assets/img/parallax/Visualisation/viewDir_vis.gif" alt="viewDir visualisation GIF"/>
+
 
 From the visualisation, we can observe the following properties:
 
@@ -104,7 +105,8 @@ float2 ParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, flo
 
 Here is a visualisation of the approach that I have prepared to ease your understanding. The red ball is the new texel (texture element) that the viewer sees after computing the parallax shift. Notice how the vector $$p$$ (length of the red line) changes as we vary the viewing angle.
 
-** insert visualisation ** 
+<img src="/assets/img/parallax/Visualisation/parallaxmap_vis.gif" alt="Parallax mapping visualisation GIF"/>
+
 
 Below are the results of this implementation in two different lighting models, **Blinn-Phong** and **Cook-Torrance + Oren-Nayar**. 
 
