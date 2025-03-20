@@ -25,7 +25,7 @@ This page is designed to help solidify one's understanding of parallax mapping a
 
 - [Overview](#overview)
 - [Simple Parallax Mapping](#simple-parallax-mapping)
-- [Parallax Occlusion Mapping](#parallax-occlusion-mapping)
+- [Steep Parallax Mapping](#steep-parallax-mapping)
 - [Self Shadowing](#self-shadowing)
   - [Shader Parameters](#shader-parameters)
 - [Performance Considerations](#performance-considerations)
@@ -133,40 +133,26 @@ Below are the results of this implementation in two different lighting models, *
 </table>
 </details>
 
+
 <br>
 As you can see the results look decent when looking down at the surface. However, as you might have expected, this basic computation does not come without its drawbacks. When looking at an angle, the algorithm fails to uphold a realistic parallax shift, creating this rather distorted and warped effect on the plane. 
 
 This happens because our simple parallax mapping only shifts the texture coordinates without actually considering **how different parts of the surface should block or hide others**. In reality, when looking at a rough surface from an angle, some areas should be hidden behind taller parts, while others should be more exposed.
 
-To solve this, we need to look into a more robust approach — **Parallax Occlusion Mapping**.
+To solve this, we need to look into a more robust approach — **Steep Parallax Mapping**.
 
 ---
-## Parallax Occlusion Mapping
+## Steep Parallax Mapping
 
+To address the issue from before and to create a more convincing effect, we need a way to simulate depth more accurately — something that allows us to refine how the surface appears as we look around. Instead of applying a single offset, what if we could trace along the surface in steps, gradually refining the displacement? 
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque risus. Proin ullamcorper cursus arcu, imperdiet semper libero. Sed volutpat ante quis enim elementum, id vulputate quam gravida. Aliquam ullamcorper posuere sapien in dapibus. Proin laoreet odio a nulla fringilla gravida. Quisque vel felis sit amet dui ultricies blandit a eget lectus. Mauris sapien eros, consequat non felis ut, mattis vestibulum mi. Maecenas urna lectus, cursus eget laoreet vel, accumsan molestie mauris. Quisque sed nisl convallis, commodo lectus sit amet, pretium odio. Aenean vitae sapien et enim hendrerit ultricies quis nec ligula. Praesent eu risus nec diam volutpat suscipit.
+Imagine walking through your room in the dark, trying to avoid bumping into furniture. If you take big steps, you risk misjudging their exact location, possibly stumbling into them, hurting yourself, and waking your parents up. But by taking small, careful steps, you can feel your way around and accurately determine where everything is.
 
-<details markdown="1">
-  <summary>Expand to view the images</summary>
+Similarly, Steep Parallax Mapping doesn’t just make one big guess. Instead, it takes multiple smaller steps, gradually refining the depth adjustment to create a much more realistic effect.
 
-  <table class="table-custom">
-  <thead>
-    <tr>
-      <th>Blinn-Phong (Empirical)</th>
-      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><img src="/assets/img/parallax/POM/BrickBP-UP.jpg" alt="Blinn-Phong"></td>
-      <td><img src="/assets/img/parallax/POM/BrickCT-UP.jpg" alt="Cook-Torrance"></td>
-    </tr>
-  </tbody>
-</table>
+Going now into more detail, 
+  
 
-</details>
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque risus. Proin ullamcorper cursus arcu, imperdiet semper libero. Sed volutpat ante quis enim elementum, id vulputate quam gravida. Aliquam ullamcorper posuere sapien in dapibus. Proin laoreet odio a nulla fringilla gravida. Quisque vel felis sit amet dui ultricies blandit a eget lectus. Mauris sapien eros, consequat non felis ut, mattis vestibulum mi. Maecenas urna lectus, cursus eget laoreet vel, accumsan molestie mauris. Quisque sed nisl convallis, commodo lectus sit amet, pretium odio. Aenean vitae sapien et enim hendrerit ultricies quis nec ligula. Praesent eu risus nec diam volutpat suscipit.
 
 <details markdown="1">
   <summary>Expand to view the images</summary>
@@ -182,6 +168,10 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque
     <tr>
       <td><img src="/assets/img/parallax/POM/BrickBP-SIDE.jpg" alt="Blinn-Phong"></td>
       <td><img src="/assets/img/parallax/POM/BrickCT-SIDE.jpg" alt="Cook-Torrance"></td>
+    </tr>
+    <tr>
+      <td><img src="/assets/img/parallax/POM/BrickBP-UP.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/POM/BrickCT-UP.jpg" alt="Cook-Torrance"></td>
     </tr>
   </tbody>
 </table>
