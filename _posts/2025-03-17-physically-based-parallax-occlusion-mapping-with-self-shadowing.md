@@ -150,9 +150,50 @@ Imagine walking through your room in the dark, trying to avoid bumping into furn
 
 Similarly, Steep Parallax Mapping doesn’t just make one big guess. Instead, it takes multiple smaller steps, gradually refining the depth adjustment to create a much more realistic effect.
 
-Going now into more detail, 
-  
+Going into more detail, we divide the total depth range (0 to 1) into multiple layers, allowing us to traverse the depth map in smaller, incremental steps. Starting from the viewer’s eye, we step along the view direction ($$viewDir$$) after hitting the surface at point A.
 
+We step into each layer in a fixed ``stepVector``, and at every step, we compare the sampled depth value from the depth map (``currentDepthMapValue``) with the current layer depth (``currentLayerDepth``). If the sampled depth is still greater than the current layer depth, we continue stepping forward until we find the correct intersection point.
+
+Before we address any questions, let me show you the code for this approach:
+
+```hlsl
+float2 SteepParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, int numLayers, float depthScale)
+{
+    // Calculate the size of a single layer
+    float layerDepth = 1.0 / numLayers;
+
+    // Determine the step vector based on our view angle
+    float2 p = viewDir.xy * depthScale;
+    float2 stepVector = p / numLayers;
+
+    // Initialise and set starting values before the loop
+    float currentLayerDepth = 0.0;
+    float2 currentTexCoords = texCoords;
+
+    // Sample with fixed LOD to avoid issues in loops that will cause GPU timeouts
+    float currentDepthMapValue = tex2Dlod(depthMap, float4(currentTexCoords, 0, 0.0)).r;
+
+    // Loop until we have stepped too far below the surface (the surface is where the depth map says it is)
+    while (currentLayerDepth < currentDepthMapValue)
+    {   
+        // Shift the texture coordinates in the direction of step vector
+        currentTexCoords -= stepVector;
+
+        // Sample the depthmap with the new texture coordinate to get the new depth value
+        currentDepthMapValue = tex2Dlod(depthMap, float4(currentTexCoords, 0, 0.0)).r;
+
+        // Move on to the next layer
+        currentLayerDepth += layerDepth;
+    }
+
+    return currentTexCoords;
+}
+
+```
+
+Why does this work? What does it mean to check if the ``currentLayerDepth`` is bigger than the ``currentDepthMapValue``? The explanation is simpler than you think.
+
+Imagine you are entering a pool in the dark and you want to find the water level. You lower yourself gradually, step by step down the staircase. At each step, you feel if your feet are still in the air or have touched the water. Suddenly in one step, your entire leg is submerged into the water! Here you can conclude that the water level must be somewhere between where your feet is and where it was in the previous step.
 
 <details markdown="1">
   <summary>Expand to view the images</summary>
