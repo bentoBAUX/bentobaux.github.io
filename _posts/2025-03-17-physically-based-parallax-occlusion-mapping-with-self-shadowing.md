@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Physically Based Parallax Occlusion Mapping with Self Shadowing
+title: Parallax Mapping with Self Shadowing
 date: 2025-03-17 21:40 +0100
 author: bennett
 categories: [Computer Graphics & Simulations]
@@ -8,14 +8,12 @@ tag: [parallax mapping, hlsl]
 math: true
 ---
 
-This project demonstrates Physically Based Parallax Occlusion Mapping (POM) with self-shadowing in **Unity's Built-In Render Pipeline using HLSL**. It compares three shading models: the Unity Standard Shader, Blinn-Phong (Empirical), and Cook-Torrance with Oren-Nayar (Physically Based). Each of these models also includes a simpler counterpart utilizing basic parallax mapping, highlighting the differences in depth perception and realism.
+This project demonstrates Physically Based Parallax Occlusion Mapping (POM) with self-shadowing in **Unity's Built-In Render Pipeline using HLSL**. It compares three shading models: the Unity Standard Shader, Blinn-Phong (Empirical), and Cook-Torrance with Oren-Nayar (Physically Based).
 
 This page is designed to help solidify one's understanding of parallax mapping and explore the advancements that enhance realism while maintaining a relatively low computational cost.
 
 <p align="center">
-  
     <img src="/assets/img/parallax/GIF.gif" alt="Example showcase GIF"/>
-  
   <br>
   <em><a href="https://youtu.be/XEO FwgZYHSo"> Watch the showcase on YouTube </a> </em>
 </p>
@@ -152,9 +150,9 @@ Similarly, Steep Parallax Mapping doesn’t just make one big guess. Instead, it
 
 Going into more detail, we divide the total depth range (0 to 1) into multiple layers, allowing us to traverse the depth map in smaller, incremental steps. Starting from the viewer’s eye, we step along the view direction ($$viewDir$$) after hitting the surface at point A.
 
-We step into each layer in a fixed ``stepVector``, and at every step, we compare the sampled depth value from the depth map (``currentDepthMapValue``) with the current layer depth (``currentLayerDepth``). If the sampled depth is still greater than the current layer depth, we continue stepping forward until we find the correct intersection point.
+We step into each layer in a fixed ``stepVector``, and at every step, we compare the sampled depth value from the depth map (``currentDepthMapValue``) with the current layer depth (``currentLayerDepth``). If the sampled depth is still greater than the current layer depth, we continue stepping forward until the ``currentDepthMapValue`` is smaller than the ``currentLayerDepth``.
 
-Before we address any questions, let me show you the code for this approach:
+Before we address any questions, let me show you how this can be implemented:
 
 ```hlsl
 float2 SteepParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, int numLayers, float depthScale)
@@ -193,7 +191,145 @@ float2 SteepParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir
 
 Why does this work? What does it mean to check if the ``currentLayerDepth`` is bigger than the ``currentDepthMapValue``? The explanation is simpler than you think.
 
-Imagine you are entering a pool in the dark and you want to find the water level. You lower yourself gradually, step by step down the staircase. At each step, you feel if your feet are still in the air or have touched the water. Suddenly in one step, your entire leg is submerged into the water! Here you can conclude that the water level must be somewhere between where your feet is and where it was in the previous step.
+Imagine you're entering a pool in the dark and you want to find the water level. You lower yourself gradually, step by step down the staircase. At each step, you feel if your feet are still in the air or have touched the water. Suddenly in one step, your entire leg is submerged into the water! Here you can conclude for the sake of simplicity that the water level is at the previous step. Don't worry, we will explore a smarter approach later.
+
+Now let's analyse the code. 
+
+<!-- omit in toc -->
+**1. Divide the depth map into multiple layers**
+```hlsl
+float layerDepth = 1.0 / numLayers;
+```
+We split the total depth range that starts from 0 (top) to 1 (bottom) into evenly spaced layers. Each layer is like a step on the staircase in our pool analogy earlier.
+
+
+<!-- omit in toc -->
+**2. Calculate the step vector**
+```hlsl
+float2 p = viewDir.xy * depthScale;
+float2 stepVector = p / numLayers;
+```
+Here, we're figuring out how to shift the texture coordinates in the direction we're looking. 
+- `viewDir.xy` gives us the viewing angle across the surface.
+- `depthScale` controls how exaggerated the depth effect is.
+- `p` gives us the total shift in texture coordinates we’ll distribute across the layers
+- `stepVector` is the direction in which we step (and also how far) for each layer. Basically determining how large a step in the staircase is in our pool analogy. 
+
+<!-- omit in toc -->
+**3. Initialise Values**
+```hlsl
+float currentLayerDepth = 0.0;
+float2 currentTexCoords = texCoords;
+float currentDepthMapValue = tex2Dlod(depthMap, float4(currentTexCoords, 0, 0.0)).r;
+```
+We're just setting our initial values before here we enter the loop. 
+
+`float4 tex2Dlod(sampler2D samp, float4 texcoord)` is used to specify a level of detail (LOD) for texture sampling, so the GPU doesn’t have to figure it out on its own — this helps prevent GPU timeouts.
+
+The LOD is included in the `float4 texcoord` parameter, written like this: `float4(uv.x, uv.y, 0, lod)`.
+LOD values start at 0 (full detail), and higher values (1, 2, 3, ...) use lower-resolution mipmap levels.
+
+
+<!-- omit in toc -->
+**4. Step through the layers**
+```hlsl
+while (currentLayerDepth < currentDepthMapValue)
+{   
+    currentTexCoords -= stepVector;
+    currentDepthMapValue = tex2Dlod(depthMap, float4(currentTexCoords, 0, 0.0)).r;
+    currentLayerDepth += layerDepth;
+}
+
+return currentTexCoords;
+```
+We keep marching through the surface layer by layer until we go too deep. Here's what happens at each step:
+
+1. **Check if we're still above the surface.** If our current layer depth is less than the depth from the depth map, it means the surface lies deeper than our current position — in other words, we haven’t reached it yet. So we continue stepping forward.
+
+2. **If we've gone too deep, we stop.** At this point, we return the last texture coordinates where we were still above the surface — this gives us the illusion of correct surface depth.
+
+3. **Otherwise, we keep stepping**:
+   - Update `currentTexCoords` by taking the next one in the direction of the `stepVector`. 
+   - Sample the depth map at the new texture coordinates. 
+   - Proceed to the next layer. 
+  
+Finally, here are the results of our new approach.
+
+<details markdown="1">
+  <summary>Expand to view the images</summary>
+
+  <table class="table-custom">
+  <thead>
+    <tr>
+      <th>Blinn-Phong (Empirical)</th>
+      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="/assets/img/parallax/Steep/BrickBP-SIDE.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/Steep/BrickCT-SIDE.jpg" alt="Cook-Torrance"></td>
+    </tr>
+    <tr>
+      <td><img src="/assets/img/parallax/Steep/BrickBP-UP.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/Steep/BrickCT-UP.jpg" alt="Cook-Torrance"></td>
+    </tr>
+  </tbody>
+</table>
+</details>
+
+<br>
+
+This is a huge improvement over the basic version. However, even with a high layer count (like 256 in this example) you can still notice visible steps or banding between layers. The illusion breaks down slightly because we're only returning the texture coordinates from the last step before we went too deep, rather than estimating where the surface actually is between the last two steps. Furthermore, we want to always use fewer layer count if possible in order to maintain a high performance in our games.
+
+To fix this, we can do better: instead of choosing just the previous step, we can interpolate between the last two steps to more accurately estimate where the surface was actually hit.
+
+This is the key idea behind **Parallax Occlusion Mapping** — a refinement of Steep Parallax Mapping that adds this extra step for improved precision and smoother results.
+
+The implementation and maths behind this is actually rather simple.
+
+We linearly interpolate the depths between the last layer that was above the surface and the first layer that went below. Since we know the depth values and texture coordinates at both steps, we can blend between them to find a more precise collision point. Instead of just snapping to one or the other, we calculate a weight that tells us how far along the step we crossed the surface.
+
+The weight tells us how far between the previous and current steps the surface intersection occurred.
+
+We assume the surface lies somewhere between these two steps. Since the depth values at each step are known, we can do linear interpolation.
+
+Think of this as: 
+
+> *"We were `beforeDepth` above the surface, and now we’re `afterDepth` below. How far between those two points did we cross the surface?"*
+
+So we compute: 
+
+```hlsl
+weight = afterDepth / (afterDepth - beforeDepth);
+```
+
+But why this formula? 
+
+Let’s say:
+
+`beforeDepth` = 0.3 (we were 0.3 units above the surface at the previous step)
+
+`afterDepth` = 0.2 (we are 0.2 units below the surface at the current step)
+
+Total distance across which we crossed the surface = 0.2 + 0.3 = 0.5
+
+So the surface lies 0.2 / 0.5 = 0.4 of the way from the previous step to the current step. So this is our weight.
+
+Using a simple linear interpolation formula, we can put everything together and the code for our refined approach looks like this:
+
+```hlsl
+float2 prevTexCoords = currentTexCoords + stepVector;
+float afterDepth = currentDepthMapValue - currentLayerDepth;
+float beforeDepth = tex2Dlod(depthMap, float4(prevTexCoords, 0, 0)).r - currentLayerDepth + layerDepth;
+
+float weight = afterDepth / (afterDepth - beforeDepth);
+float2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+return finalTexCoords;
+```
+
+And here are the results without the artefacts from before:
 
 <details markdown="1">
   <summary>Expand to view the images</summary>
@@ -217,6 +353,7 @@ Imagine you are entering a pool in the dark and you want to find the water level
   </tbody>
 </table>
 </details>
+
 
 --- 
 ## Self Shadowing
