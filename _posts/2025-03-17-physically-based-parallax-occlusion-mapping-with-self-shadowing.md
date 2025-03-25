@@ -24,6 +24,7 @@ This page is designed to help solidify one's understanding of parallax mapping a
 - [Overview](#overview)
 - [Simple Parallax Mapping](#simple-parallax-mapping)
 - [Steep Parallax Mapping](#steep-parallax-mapping)
+- [Parallax Occlusion Mapping](#parallax-occlusion-mapping)
 - [Self Shadowing](#self-shadowing)
   - [Shader Parameters](#shader-parameters)
 - [Performance Considerations](#performance-considerations)
@@ -283,11 +284,14 @@ Finally, here are the results of our new approach.
 
 <br>
 
-This is a huge improvement over the basic version. However, even with a high layer count (like 256 in this example), you can still notice visible steps or banding between layers. The illusion breaks down slightly because we're still only returning the texture coordinates from the last step before we went too deep, without considering where the actual surface lies between the last two steps.
+This is a huge improvement over the basic version. However, even with a high layer count (256 in this example), you can still notice visible steps or banding between layers. The illusion breaks down slightly because we're still only returning the texture coordinates from the last step before we went too deep, without considering where the actual surface lies between the last two steps.
 
 And beyond visual quality, we also want to minimise the layer count for performance reasons — especially in real-time applications like games.
 
-To address both issues, we can take a smarter approach: instead of just stopping at the last valid step, we can interpolate between the two most recent samples to more accurately estimate where the surface was intersected.
+---
+## Parallax Occlusion Mapping
+
+To address both issues that we face in Steep Parallax Mapping, we can take a smarter approach: instead of just stopping at the last valid step, we can **interpolate between the two most recent samples** to more accurately estimate where the surface was intersected.
 
 This is the key idea behind **Parallax Occlusion Mapping** — a refinement of Steep Parallax Mapping that adds this extra step for improved precision and smoother results.
 
@@ -303,9 +307,9 @@ At each of these points, we calculate how far we are from the surface. By compar
 
 Thinking of this as,
 
-> *"We're moving from `surfaceOffsetBefore` (above the surface) to `surfaceOffsetAfter` (below the surface). At what fraction along that path did we hit the surface?"*
+> *"We're moving from `surfaceOffsetBefore` (above the surface) to `surfaceOffsetAfter` (below the surface). **At what fraction along that path did we hit the surface**?"*
 
-The formula becomes:
+the formula becomes:
 
 $$
 
@@ -321,7 +325,7 @@ So we compute:
 weight = surfaceOffsetAfter / (surfaceOffsetAfter - surfaceOffsetBefore);
 ```
 
-This gives us a value between 0 and 1, telling us how far between the two texture coordinates the surface lies. We can then use that weight to blend between the texture coordinates from both steps.
+This gives us a value between 0 and 1, telling us **how far between the two texture coordinates the surface lies**. We can then use that weight to blend between the texture coordinates from both steps.
 
 Using this, our refined version of the algorithm looks like this:
 
@@ -342,7 +346,7 @@ float2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weigh
 return finalTexCoords;
 ```
 
-And here are the results without the artefacts from before:
+And here are the results without the artefacts from before with the same layer count:
 
 <details markdown="1">
   <summary>Expand to view the images</summary>
@@ -371,7 +375,32 @@ And here are the results without the artefacts from before:
 --- 
 ## Self Shadowing
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sodales scelerisque risus. Proin ullamcorper cursus arcu, imperdiet semper libero. Sed volutpat ante quis enim elementum, id vulputate quam gravida. Aliquam ullamcorper posuere sapien in dapibus. Proin laoreet odio a nulla fringilla gravida. Quisque vel felis sit amet dui ultricies blandit a eget lectus. Mauris sapien eros, consequat non felis ut, mattis vestibulum mi. Maecenas urna lectus, cursus eget laoreet vel, accumsan molestie mauris. Quisque sed nisl convallis, commodo lectus sit amet, pretium odio. Aenean vitae sapien et enim hendrerit ultricies quis nec ligula. Praesent eu risus nec diam volutpat suscipit.
+We have achieved what we sought to achieve - a relatively low-cost approach in enhancing realism by faking depth on a flat surface. 
+
+Why don't we take it a step further?
+
+If you set up your scene with lights, you will notice that even with convincing surface detail, the illusion breaks down when lighting interacts with the surface. If light hits a deep groove or crack, we expect parts of it to be in shadow — yet everything looks uniformly lit and flat. 
+
+To make our illusion even more convincing, we need to simulate this interaction between light and surface detail. 
+
+This is where **self-shadowing** comes into play.
+
+Just like how Steep Parallax Mapping marches through depth layers along the view direction to find where the surface intersects the eye, Parallax Shadowing applies the same idea — but along the light direction instead.
+
+We’re essentially asking:
+
+> “If a ray of light traveled across this surface, would it be blocked by any height variations along the way?”
+
+To answer this, we march through the depth map along the light direction, starting at the texel coordinate we previously calculated from the parallax effect.
+
+Like before, we divide the total depth range (from 0 to 1) into a number of evenly spaced layers.
+
+```hlsl
+float layerDepth = 1.0 / numLayers;
+```
+
+We then calculate how far to move across the surface in texture space for each step, based on the light's direction and a scaling factor. This defines how "slanted" the light ray will appear as it travels over the surface. 
+
 
 <details markdown="1">
   <summary>Expand to view the images</summary>
