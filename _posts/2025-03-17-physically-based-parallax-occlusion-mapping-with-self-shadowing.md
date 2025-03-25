@@ -47,7 +47,10 @@ At its core, parallax mapping distorts parts of a 2D texture based on how we vie
 
 With this information, we can now compute the displaced texture coordinates for **each pixel** rendered on the screen.
 
-Firstly, we must **retrieve the depth value** for the current pixel we are computing for. This can be simply done by sampling the depth map with the interpolated UVs for the current pixel.
+Firstly, we must **retrieve the depth value** for the current pixel we are computing for. This can be simply done by sampling the depth map with the interpolated UVs for the current pixel. 
+
+>The depth values and depth maps we talk about here are not to be confused with the depth values and depth maps associated with the depth buffer!
+{: .prompt-warning}
 
 ```hlsl
 float2 ParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, float depthScale)
@@ -280,50 +283,60 @@ Finally, here are the results of our new approach.
 
 <br>
 
-This is a huge improvement over the basic version. However, even with a high layer count (like 256 in this example) you can still notice visible steps or banding between layers. The illusion breaks down slightly because we're only returning the texture coordinates from the last step before we went too deep, rather than estimating where the surface actually is between the last two steps. Furthermore, we want to always use fewer layer count if possible in order to maintain a high performance in our games.
+This is a huge improvement over the basic version. However, even with a high layer count (like 256 in this example), you can still notice visible steps or banding between layers. The illusion breaks down slightly because we're still only returning the texture coordinates from the last step before we went too deep, without considering where the actual surface lies between the last two steps.
 
-To fix this, we can do better: instead of choosing just the previous step, we can interpolate between the last two steps to more accurately estimate where the surface was actually hit.
+And beyond visual quality, we also want to minimise the layer count for performance reasons — especially in real-time applications like games.
+
+To address both issues, we can take a smarter approach: instead of just stopping at the last valid step, we can interpolate between the two most recent samples to more accurately estimate where the surface was intersected.
 
 This is the key idea behind **Parallax Occlusion Mapping** — a refinement of Steep Parallax Mapping that adds this extra step for improved precision and smoother results.
 
-The implementation and maths behind this is actually rather simple.
+The maths behind it is actually quite simple.
 
-We linearly interpolate the depths between the last layer that was above the surface and the first layer that went below. Since we know the depth values and texture coordinates at both steps, we can blend between them to find a more precise collision point. Instead of just snapping to one or the other, we calculate a weight that tells us how far along the step we crossed the surface.
+We identify two key moments:
 
-The weight tells us how far between the previous and current steps the surface intersection occurred.
+- The last step where we were still **above** the surface
 
-We assume the surface lies somewhere between these two steps. Since the depth values at each step are known, we can do linear interpolation.
+- The first step where we ended up **below** it
 
-Think of this as: 
+At each of these points, we calculate how far we are from the surface. By comparing those offsets, we can estimate how far along that transition the surface was actually crossed.
 
-> *"We were `beforeDepth` above the surface, and now we’re `afterDepth` below. How far between those two points did we cross the surface?"*
+Thinking of this as,
+
+> *"We're moving from `surfaceOffsetBefore` (above the surface) to `surfaceOffsetAfter` (below the surface). At what fraction along that path did we hit the surface?"*
+
+The formula becomes:
+
+$$
+
+\text{weight} = \frac{\text{surfaceOffsetAfter}}{\text{surfaceOffsetAfter} + \text{surfaceOffsetBefore}}
+
+$$
+
+Since because ``surfaceOffsetBefore`` is always [negative](/assets/img/parallax/surfaceOffsetBeforeIsNegative.png), subtracting it achieves the same result.
 
 So we compute: 
 
 ```hlsl
-weight = afterDepth / (afterDepth - beforeDepth);
+weight = surfaceOffsetAfter / (surfaceOffsetAfter - surfaceOffsetBefore);
 ```
 
-But why this formula? 
+This gives us a value between 0 and 1, telling us how far between the two texture coordinates the surface lies. We can then use that weight to blend between the texture coordinates from both steps.
 
-Let’s say:
-
-`beforeDepth` = 0.3 (we were 0.3 units above the surface at the previous step)
-
-`afterDepth` = 0.2 (we are 0.2 units below the surface at the current step)
-
-Total distance across which we crossed the surface = 0.2 + 0.3 = 0.5
-
-So the surface lies 0.2 / 0.5 = 0.4 of the way from the previous step to the current step. So this is our weight.
-
-Using a simple linear interpolation formula, we can put everything together and the code for our refined approach looks like this:
+Using this, our refined version of the algorithm looks like this:
 
 ```hlsl
+// Compute the texture coordinates from the previous iteration
 float2 prevTexCoords = currentTexCoords + stepVector;
-float afterDepth = currentDepthMapValue - currentLayerDepth;
-float beforeDepth = tex2Dlod(depthMap, float4(prevTexCoords, 0, 0)).r - currentLayerDepth + layerDepth;
 
-float weight = afterDepth / (afterDepth - beforeDepth);
+// Compute how far below the surface we are at the current step
+float surfaceOffsetAfter = currentDepthMapValue - currentLayerDepth;
+
+// Compute how far above the surface we were at the previous step
+float surfaceOffsetBefore = tex2Dlod(depthMap, float4(prevTexCoords, 0, 0)).r - currentLayerDepth + layerDepth;
+
+// Linearly interpolate the texture coordinates using the calculated weight
+float weight = surfaceOffsetAfter / (surfaceOffsetAfter - surfaceOffsetBefore);
 float2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
 
 return finalTexCoords;
