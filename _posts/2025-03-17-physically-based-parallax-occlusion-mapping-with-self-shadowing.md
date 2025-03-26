@@ -13,9 +13,9 @@ This project demonstrates Physically Based Parallax Occlusion Mapping (POM) with
 This page is designed to help solidify one's understanding of parallax mapping and explore the advancements that enhance realism while maintaining a relatively low computational cost.
 
 <p align="center">
-    <img src="/assets/img/parallax/GIF.gif" alt="Example showcase GIF"/>
+    <a href="https://youtu.be/XEOFwgZYHSo"><img src="/assets/img/parallax/GIF.gif" alt="Example showcase GIF"/></a>
   <br>
-  <em><a href="https://youtu.be/XEO FwgZYHSo"> Watch the showcase on YouTube </a> </em>
+  <em><a href="https://youtu.be/XEOFwgZYHSo">Watch the showcase on YouTube</a></em>
 </p>
 
 <!-- omit in toc -->
@@ -26,6 +26,7 @@ This page is designed to help solidify one's understanding of parallax mapping a
 - [Steep Parallax Mapping](#steep-parallax-mapping)
 - [Parallax Occlusion Mapping](#parallax-occlusion-mapping)
 - [Self Shadowing](#self-shadowing)
+    - [Understanding Tangent Space and Light Direction](#understanding-tangent-space-and-light-direction)
   - [Shader Parameters](#shader-parameters)
 - [Performance Considerations](#performance-considerations)
 - [Future Improvements](#future-improvements)
@@ -73,7 +74,7 @@ From the visualisation, we can observe the following properties:
 
 This means that **$$viewDir_z$$ effectively acts as a depth factor**, determining how much perspective distortion occurs. When looking straight down, there should be minimal distortion, and when looking at an angle, the shift should be more pronounced.
 
-A natural way to achieve this scaling effect is by **dividing the $$xy$$ components of $$viewDir$$ by its $$z$$ component**:
+A natural way to achieve this effect is to **project the 3D view direction onto the 2D texture space** by dividing the $$xy$$ components of $$viewDir$$ by its $$z$$ component:
 
 $$
 p = \frac{viewDir_xy}{viewDir_z} * (\text{depth} * \text{depth scale factor})
@@ -84,7 +85,7 @@ This division ensures that:
 - $$\frac{viewDir_xy}{viewDir_z}$$ is **small** when $$viewDir_z$$ is **large** (looking directly down at the surface).
 - $$\frac{viewDir_xy}{viewDir_z}$$ is **large** when $$viewDir_z$$ is **small** (looking at the surface at an angle).
 
-The displacement is then scaled appropriately based on the pixel’s depth value, $$\text{depth}$$, and a user-defined depth scale factor, $$\text{depth scale factor}$$, ensuring a flexible and controllable parallax effect.
+The displacement is then scaled appropriately based on the pixel’s depth value, $$\text{depth}$$, and a user-defined depth scale factor, $$\text{depth scale factor}$$, ensuring a flexible and controllable parallax effect. 
 
 Finally, we compute the new texture coordinates, $$t'$$, by adjusting the texture coordinates, $$t$$:
 
@@ -317,7 +318,7 @@ $$
 
 $$
 
-Since because ``surfaceOffsetBefore`` is always [negative](/assets/img/parallax/surfaceOffsetBeforeIsNegative.png), subtracting it achieves the same result.
+Since because ``surfaceOffsetBefore`` is always [negative](/assets/img/parallax/surfaceOffsetBeforeIsNegative.png), we must flip the positive sign to a negative.
 
 So we compute: 
 
@@ -385,22 +386,96 @@ To make our illusion even more convincing, we need to simulate this interaction 
 
 This is where **self-shadowing** comes into play.
 
-Just like how Steep Parallax Mapping marches through depth layers along the view direction to find where the surface intersects the eye, Parallax Shadowing applies the same idea — but along the light direction instead.
+#### Understanding Tangent Space and Light Direction
 
-We’re essentially asking:
+Before we can simulate self-shadowing, it’s important to understand why we work in tangent space and how light vectors behave in this local coordinate system.
 
-> “If a ray of light traveled across this surface, would it be blocked by any height variations along the way?”
+**Why Tangent Space?**
 
-To answer this, we march through the depth map along the light direction, starting at the texel coordinate we previously calculated from the parallax effect.
+Our height maps, normal maps, and UVs are defined in texture space, but light and view directions exist in world space. To make lighting interact correctly with texture-based surface detail, we transform those vectors into tangent space — a local space aligned with each fragment’s surface and UV layout.
 
-Like before, we divide the total depth range (from 0 to 1) into a number of evenly spaced layers.
+Tangent space makes lighting calculations independent of the object’s rotation. Without it, the effect would look visually incorrect — shadows and highlights would stay fixed relative to world space instead of following the surface. Rotating the object would break the illusion, as lighting would no longer match the texture detail.
+
+**How Light Vectors Behave In Tangent Space**
+
+In tangent space, the surface is aligned like this:
+
+- +X → tangent (U direction)
+
+- +Y → bitangent (V direction)
+
+- +Z → surface normal, pointing outward
+
+So a light shining from in front of the surface will point toward −Z in tangent space. This is why the Z component of the light vector becomes so important for self-shadowing.
+
+**What to Do With This Information**
+
+Now that we know how to interpret light direction in tangent space, we can use the Z component to decide whether self-shadowing should be calculated at all.
+
+If `lightDir.z >= 0`, the light is behind the surface, and no surface detail should cast shadows in this case. To avoid unnecessary computation, we simply skip the shadowing pass:
+
+```hlsl
+if (lightDir.z >= 0.0) return 0.0;
+```
+
+This keeps the shader efficient and ensures that shadow rays are only traced when the surface is lit from the front — where shadowing is visually meaningful.
+
+**Self Shadowing Algorithm**
+
+Once we've confirmed that the light is in front of the surface (`lightDir.z < 0.0`), we can proceed with simulating how light rays interact with the surface detail described by the height map. The idea is to march along the light's direction in tangent space, checking if any elevated point along the path blocks the light.
+
+First, we calculate the number of layers and the step size per layer:
 
 ```hlsl
 float layerDepth = 1.0 / numLayers;
+vec2 p = lightDir.xy / lightDir.z * depthScale;
+vec2 stepVector = p / numLayers;
 ```
 
-We then calculate how far to move across the surface in texture space for each step, based on the light's direction and a scaling factor. This defines how "slanted" the light ray will appear as it travels over the surface. 
+Here, `p` is the total projected UV offset in the direction of the light, scaled by `depthScale`. Dividing by `numLayers` gives us the UV step for each iteration.
 
+We then begin ray marching from the current texture coordinates and initial depth:
+
+```hlsl
+vec2 currentTexCoords = texCoords;
+float currentDepthMapValue = tex2D(depthMap, currentTexCoords).r;
+float currentLayerDepth = currentDepthMapValue;
+```
+
+To avoid false shadowing from very small height changes, we introduce a small bias:
+
+```hlsl
+float shadowBias = 0.03;
+```
+This helps prevent high-frequency shadow noise by allowing shallow indentations to remain lit. We also limit the number of iterations to keep the shader efficient and compatible with GPU loop unrolling limits:
+
+```hlsl
+int maxIterations = 32;
+int iterationCount = 0;
+```
+
+Now we walk along the light direction, layer by layer:
+
+```hlsl
+while (currentLayerDepth <= currentDepthMapValue + shadowBias && currentLayerDepth > 0.0 && iterationCount < maxIterations)
+{
+    currentTexCoords += stepVector;
+    currentDepthMapValue = tex2D(depthMap, currentTexCoords).r;
+    currentLayerDepth -= layerDepth;
+    iterationCount++;
+}
+```
+This loop ends if the ray exits the surface, hits an occluder, or exceeds the iteration limit.
+
+Finally, we determine if the light path is blocked:
+
+```hlsl
+return currentLayerDepth > currentDepthMapValue ? 0.0 : 1.0;
+```
+
+If the ray reached a depth where the height map is still lower, the fragment is shadowed (returns 0.0). Otherwise, it’s fully lit (1.0).
+
+Here are the final results for this tutorial:
 
 <details markdown="1">
   <summary>Expand to view the images</summary>
@@ -416,6 +491,10 @@ We then calculate how far to move across the surface in texture space for each s
     <tr>
       <td><img src="/assets/img/parallax/SelfShadow/BrickBP-UP.jpg" alt="Blinn-Phong"></td>
       <td><img src="/assets/img/parallax/SelfShadow/BrickCT-UP.jpg" alt="Cook-Torrance"></td>
+    </tr>
+    <tr>
+      <td><img src="/assets/img/parallax/SelfShadow/BrickBP-SIDE.jpg" alt="Blinn-Phong"></td>
+      <td><img src="/assets/img/parallax/SelfShadow/BrickCT-SIDE.jpg" alt="Cook-Torrance"></td>
     </tr>
   </tbody>
 </table>
