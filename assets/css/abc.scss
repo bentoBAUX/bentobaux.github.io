@@ -42,12 +42,3 @@
   height: auto;
   object-fit: contain;
 }
-
-/* Responsive Table for Small Screens */
-@media (max-width: 768px) {
-  .table-custom {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-}
