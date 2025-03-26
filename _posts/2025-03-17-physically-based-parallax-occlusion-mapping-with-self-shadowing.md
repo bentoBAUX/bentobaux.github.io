@@ -18,28 +18,263 @@ This page is designed to help solidify one's understanding of parallax mapping a
   <em><a href="https://youtu.be/XEOFwgZYHSo">Watch the showcase on YouTube</a></em>
 </p>
 
-<!-- omit in toc -->
-## Table of Contents
 
-- [Overview](#overview)
-- [Simple Parallax Mapping](#simple-parallax-mapping)
-- [Steep Parallax Mapping](#steep-parallax-mapping)
-- [Parallax Occlusion Mapping](#parallax-occlusion-mapping)
-- [Self Shadowing](#self-shadowing)
-    - [Understanding Tangent Space and Light Direction](#understanding-tangent-space-and-light-direction)
-  - [Shader Parameters](#shader-parameters)
-- [Performance Considerations](#performance-considerations)
-- [Future Improvements](#future-improvements)
-- [Credits](#credits)
-- [License](#license)
-
----
 
 ## Overview 
 
 Have you ever seen those mind-bending [optical illusion street art](https://d36tnp772eyphs.cloudfront.net/blogs/1/2019/06/Edgar-Mueller-street-mural-optical-illusion-of-ice-cliff.jpg) that turns a flat sidewalk into a deep dark abyss? From the right angle, it feels like you are standing on the edge of a cliff, staring into the gaping unknown. You might even ask a friend to hold the camera while you carefully step on the painted "debris" to strike a frightened pose for your Instagram. This is the concept behind parallax mapping - shifting textures to trick your eyes into seeing real depth.
 
 This is the concept behind parallax mapping—shifting textures to trick your eyes into perceiving real depth.
+
+---
+
+## Getting Started
+
+#### Why Tangent Space?
+
+Before diving into this tutorial, let's talk about the setup for this little project and why it is important that we work in tangent space.
+
+Our height maps, normal maps, and UVs are defined in texture space, but light and view directions exist in world space. To make lighting interact correctly with texture-based surface detail, we transform those vectors into tangent space — a local space aligned with each fragment’s surface and UV layout.
+
+Tangent space makes lighting calculations independent of the object’s rotation. Without it, the effect would look visually incorrect — shadows and highlights would stay fixed relative to world space instead of following the surface. Rotating the object would break the illusion, as lighting would no longer match the texture detail.
+
+#### Setting Up Tangent Space in HLSL
+
+To work in tangent space, we need to create a transformation matrix called the **TBN matrix**, composed of the tangent, bitangent, and normal vectors in world space.
+
+Here’s how to compute this in the vertex shader:
+
+```hlsl
+v2f vert(appdata v)
+{
+  v2f o;
+  o.pos = UnityObjectToClipPos(v.vertex);
+  o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+  o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+
+  half3 worldNormal = UnityObjectToWorldNormal(v.normal);
+  half3 worldTangent = normalize(mul((float3x3)unity_ObjectToWorld, v.tangent));
+  float3 worldBitangent = normalize(cross(worldNormal, worldTangent) * v.tangent.w);
+
+  o.TBN = float3x3(worldTangent, worldBitangent, worldNormal);
+
+  return o;
+}
+
+```
+In the fragment shader, we can then transform any world-space vector into tangent space using the TBN matrix:
+
+```hlsl
+fixed4 frag(v2f i) : SV_Target
+{
+    half3 v = normalize(_WorldSpaceCameraPos - i.worldPos);
+    half3 l = normalize(_WorldSpaceLightPos0.xyz);
+
+    half3 v_TS = normalize(mul(i.TBN, v));
+    half3 l_TS = normalize(mul(i.TBN, l));
+
+    // Lighting and parallax code
+}
+```
+This ensures that our lighting and shadowing calculations align perfectly with the texture data — no matter how the surface is oriented in the world.
+
+#### How to use the code here in my shader?
+
+Throughout this tutorial, we’ll be implementing the following parallax-related functions:
+
+```hlsl
+// Simple Parallax Mapping
+float2 SimpleParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, float depthScale);
+
+// Steep Parallax Mapping + Parallax Occlusion Mapping
+float2 SteepParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, int numLayers, float depthScale);
+
+// Self-Shadowing
+float SelfShadowing(sampler2D depthMap, float2 texCoords, float3 lightDir, float numLayers, float depthScale);
+```
+
+#### Example Usage
+
+Once you’ve transformed your **view** and **light** vectors into tangent space, you can plug them directly into the functions:
+
+```hlsl
+// If you want simple parallax mapping
+float2 texCoords = SimpleParallaxMapping(_Depth, i.uv, viewDir_TS, _DepthScale);
+
+// If you want steep parallax mapping + parallax occlusion mapping
+float2 texCoords = SteepParallaxMapping(_Depth, i.uv, v_TS, _NumberOfLayers, _DepthScale);
+
+// Using self-shadowing
+float parallaxShadows = SelfShadowing(_Depth, texCoords, l_TS, _NumberOfLayers, _DepthScale);
+
+// Lighting code...
+return ambient + (diffuse + specular) * parallaxShadows;
+```
+
+Don't worry if you have problems setting this up. You may use the [Blinn-Phong](https://github.com/bentoBAUX/Physically-Based-Parallax-Occlusion-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Blinn-Phong.shader) and [Cook-Torrance](https://github.com/bentoBAUX/Physically-Based-Parallax-Occlusion-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Cook-Torrance.shader) shaders that I have wrote for this tutorial. [Here](https://github.com/bentoBAUX/Physically-Based-Parallax-Occlusion-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Parallax-Mapping.hlsl) you can also find the complete parallax mapping shader for this tutorial.
+
+<details>
+  <summary><strong>Shader Parameters – Blinn-Phong</strong></summary>
+  <br>
+  <table>
+    <thead>
+      <tr>
+        <th><strong>Property</strong></th>
+        <th><strong>Display Name</strong></th>
+        <th><strong>Description</strong></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>_DiffuseColour</code></td>
+        <td>Diffuse Colour</td>
+        <td>Defines the base colour of the material, used in diffuse lighting calculations.</td>
+      </tr>
+      <tr>
+        <td><code>_MainTex</code></td>
+        <td>Albedo (RGB)</td>
+        <td>The main texture applied to the surface, representing its base colour (albedo).</td>
+      </tr>
+      <tr>
+        <td><code>_Normal</code></td>
+        <td>Normal Map</td>
+        <td>The normal map used to simulate fine surface detail and lighting variation.</td>
+      </tr>
+      <tr>
+        <td><code>_NormalStrength</code></td>
+        <td>Normal Strength</td>
+        <td>Scales the influence of the normal map, exaggerating or softening surface bumps.</td>
+      </tr>
+      <tr>
+        <td><code>_Depth</code></td>
+        <td>Depth Map</td>
+        <td>The inverse of a height map used for parallax mapping to simulate surface depth.</td>
+      </tr>
+      <tr>
+        <td><code>_NumberOfLayers</code></td>
+        <td>Number of Layers</td>
+        <td>Controls how many steps are taken in the raymarch for parallax and shadow tracing.</td>
+      </tr>
+      <tr>
+        <td><code>_DepthScale</code></td>
+        <td>Depth Scale</td>
+        <td>Adjusts how strong the parallax displacement effect appears.</td>
+      </tr>
+      <tr>
+        <td><code>_UseSteep</code></td>
+        <td>Steep Parallax</td>
+        <td>Enables steep parallax mapping for more accurate depth simulation using raymarching.</td>
+      </tr>
+      <tr>
+        <td><code>_UseShadows</code></td>
+        <td>Enable Shadows</td>
+        <td>Enables self-shadowing by checking whether light is occluded by surface features.</td>
+      </tr>
+      <tr>
+        <td><code>_TrimEdges</code></td>
+        <td>Trim Edges</td>
+        <td>Discards pixels with distorted or invalid UVs to avoid edge artefacts from parallax.</td>
+      </tr>
+      <tr>
+        <td><code>_SpecularExponent</code></td>
+        <td>Specular Exponent</td>
+        <td>Controls the sharpness of specular highlights — higher values give tighter reflections.</td>
+      </tr>
+      <tr>
+        <td><code>_k</code></td>
+        <td>Coefficients (Ambient, Diffuse, Specular)</td>
+        <td>A vector defining the strength of ambient, diffuse, and specular light contributions.</td>
+      </tr>
+    </tbody>
+  </table>
+</details>
+
+
+<details>
+  <summary><strong>Shader Parameters – Cook-Torrance</strong></summary>
+  <br>
+  <table>
+    <thead>
+      <tr>
+        <th><strong>Property</strong></th>
+        <th><strong>Display Name</strong></th>
+        <th><strong>Description</strong></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>_DiffuseColour</code></td>
+        <td>Diffuse Colour</td>
+        <td>Defines the base colour of the material, used in diffuse lighting calculations.</td>
+      </tr>
+      <tr>
+        <td><code>_MainTex</code></td>
+        <td>Albedo (RGB)</td>
+        <td>The primary texture applied to the surface, representing the material's albedo or colour map.</td>
+      </tr>
+      <tr>
+        <td><code>_Roughness</code></td>
+        <td>Roughness Map</td>
+        <td>Greyscale texture map that defines the micro-roughness of the surface.</td>
+      </tr>
+      <tr>
+        <td><code>_sigma</code></td>
+        <td>Roughness Factor</td>
+        <td>Roughness factor used to globally scale or adjust the effect of the roughness map.</td>
+      </tr>
+      <tr>
+        <td><code>_Normal</code></td>
+        <td>Normal Map</td>
+        <td>The normal map texture that adds per-pixel detail for realistic light interaction.</td>
+      </tr>
+      <tr>
+        <td><code>_NormalStrength</code></td>
+        <td>Normal Strength</td>
+        <td>Controls the strength of the normal map effect, exaggerating or softening surface details.</td>
+      </tr>
+      <tr>
+        <td><code>_Depth</code></td>
+        <td>Depth Map</td>
+        <td>The inverse of a height map used for parallax mapping to simulate surface depth.</td>
+      </tr>
+      <tr>
+        <td><code>_NumberOfLayers</code></td>
+        <td>Number of Layers</td>
+        <td>The number of layers used for parallax raymarching. Higher values increase accuracy at the cost of performance.</td>
+      </tr>
+      <tr>
+        <td><code>_DepthScale</code></td>
+        <td>Depth Scale</td>
+        <td>Controls the depth intensity of the parallax effect. Lower values produce subtle displacement; higher values exaggerate it.</td>
+      </tr>
+      <tr>
+        <td><code>_UseSteep</code></td>
+        <td>Steep Parallax</td>
+        <td>Enables Steep Parallax Mapping for more accurate depth simulation via raymarching.</td>
+      </tr>
+      <tr>
+        <td><code>_UseShadows</code></td>
+        <td>Enable Shadows</td>
+        <td>Enables self-shadowing by tracing whether light is occluded by displaced surface geometry.</td>
+      </tr>
+      <tr>
+        <td><code>_TrimEdges</code></td>
+        <td>Trim Edges</td>
+        <td>Discards fragments with distorted or out-of-bounds UVs near texture edges, preventing artefacts.</td>
+      </tr>
+      <tr>
+        <td><code>_Metallic</code></td>
+        <td>Metallic</td>
+        <td>Controls the metallic quality of the surface. 0 = dielectric (non-metal), 1 = pure metal.</td>
+      </tr>
+      <tr>
+        <td><code>_RefractiveIndex</code></td>
+        <td>Refractive Index</td>
+        <td>Defines the refractive index used in the Fresnel calculation. Affects how reflective the surface appears at grazing angles.</td>
+      </tr>
+    </tbody>
+  </table>
+</details>
 
 ---
 
@@ -51,7 +286,7 @@ With this information, we can now compute the displaced texture coordinates for 
 
 Firstly, we must **retrieve the depth value** for the current pixel we are computing for. This can be simply done by sampling the depth map with the interpolated UVs for the current pixel. 
 
->The depth values and depth maps we talk about here are not to be confused with the depth values and depth maps associated with the depth buffer!
+>The depth values and depth maps we talk about here are not to be confused with the depth values and depth maps associated with the **depth buffer**!
 {: .prompt-warning}
 
 ```hlsl
@@ -201,7 +436,7 @@ Imagine you're entering a pool in the dark and you want to find the water level.
 Now let's analyse the code. 
 
 <!-- omit in toc -->
-**1. Divide the depth map into multiple layers**
+#### 1. Divide the depth map into multiple layers
 ```hlsl
 float layerDepth = 1.0 / numLayers;
 ```
@@ -209,7 +444,7 @@ We split the total depth range that starts from 0 (top) to 1 (bottom) into evenl
 
 
 <!-- omit in toc -->
-**2. Calculate the step vector**
+#### 2. Calculate the step vector
 ```hlsl
 float2 p = viewDir.xy * depthScale;
 float2 stepVector = p / numLayers;
@@ -221,7 +456,7 @@ Here, we're figuring out how to shift the texture coordinates in the direction w
 - `stepVector` is the direction in which we step (and also how far) for each layer. Basically determining how large a step in the staircase is in our pool analogy. 
 
 <!-- omit in toc -->
-**3. Initialise Values**
+#### 3. Initialise Values
 ```hlsl
 float currentLayerDepth = 0.0;
 float2 currentTexCoords = texCoords;
@@ -236,7 +471,7 @@ LOD values start at 0 (full detail), and higher values (1, 2, 3, ...) use lower-
 
 
 <!-- omit in toc -->
-**4. Step through the layers**
+#### 4. Step through the layers
 ```hlsl
 while (currentLayerDepth < currentDepthMapValue)
 {   
@@ -386,31 +621,26 @@ To make our illusion even more convincing, we need to simulate this interaction 
 
 This is where **self-shadowing** comes into play.
 
+<!-- omit in toc -->
 #### Understanding Tangent Space and Light Direction
 
-Before we can simulate self-shadowing, it’s important to understand why we work in tangent space and how light vectors behave in this local coordinate system.
-
-**Why Tangent Space?**
-
-Our height maps, normal maps, and UVs are defined in texture space, but light and view directions exist in world space. To make lighting interact correctly with texture-based surface detail, we transform those vectors into tangent space — a local space aligned with each fragment’s surface and UV layout.
-
-Tangent space makes lighting calculations independent of the object’s rotation. Without it, the effect would look visually incorrect — shadows and highlights would stay fixed relative to world space instead of following the surface. Rotating the object would break the illusion, as lighting would no longer match the texture detail.
+Before we can simulate self-shadowing, it’s important to understand how light vectors behave in this tangent space.
 
 **How Light Vectors Behave In Tangent Space**
 
 In tangent space, the surface is aligned like this:
 
-- +X → tangent (U direction)
+- $$+x$$  → tangent ($$u$$ direction)
 
-- +Y → bitangent (V direction)
+- $$+y$$  → bitangent ($$v$$ direction)
 
-- +Z → surface normal, pointing outward
+- $$+z$$  → surface normal, pointing outward
 
-So a light shining from in front of the surface will point toward −Z in tangent space. This is why the Z component of the light vector becomes so important for self-shadowing.
+So a light shining from in front of the surface will point toward $$−z$$ in tangent space. This is why the $$z$$ component of the light vector becomes so important for self-shadowing.
 
 **What to Do With This Information**
 
-Now that we know how to interpret light direction in tangent space, we can use the Z component to decide whether self-shadowing should be calculated at all.
+Now that we know how to interpret light direction in tangent space, we can use the $$z$$ component to decide whether self-shadowing should be calculated at all.
 
 If `lightDir.z >= 0`, the light is behind the surface, and no surface detail should cast shadows in this case. To avoid unnecessary computation, we simply skip the shadowing pass:
 
@@ -434,7 +664,7 @@ vec2 stepVector = p / numLayers;
 
 Here, `p` is the total projected UV offset in the direction of the light, scaled by `depthScale`. Dividing by `numLayers` gives us the UV step for each iteration.
 
-We then begin ray marching from the current texture coordinates and initial depth:
+We then begin ray marching from the current texture coordinates (calculated from Parallax Mapping) and initial depth:
 
 ```hlsl
 vec2 currentTexCoords = texCoords;
@@ -447,14 +677,14 @@ To avoid false shadowing from very small height changes, we introduce a small bi
 ```hlsl
 float shadowBias = 0.03;
 ```
-This helps prevent high-frequency shadow noise by allowing shallow indentations to remain lit. We also limit the number of iterations to keep the shader efficient and compatible with GPU loop unrolling limits:
+This is an aesthetic choice that helps avoid noisy shadows caused by small bumps in the surface. We also limit the number of iterations to keep the shader efficient and compatible with GPU loop unrolling limits:
 
 ```hlsl
 int maxIterations = 32;
 int iterationCount = 0;
 ```
 
-Now we walk along the light direction, layer by layer:
+Now we walk along the light direction, layer by layer — this time traversing upwards instead of downwards like we did before:
 
 ```hlsl
 while (currentLayerDepth <= currentDepthMapValue + shadowBias && currentLayerDepth > 0.0 && iterationCount < maxIterations)
@@ -473,7 +703,7 @@ Finally, we determine if the light path is blocked:
 return currentLayerDepth > currentDepthMapValue ? 0.0 : 1.0;
 ```
 
-If the ray reached a depth where the height map is still lower, the fragment is shadowed (returns 0.0). Otherwise, it’s fully lit (1.0).
+If the ray reaches a point where the value stored in the depth map at the current texture coordinate is below the current layer depth, it means something blocks the light — the fragment is in shadow (0.0). If the ray completes without hitting such a point, the fragment is fully lit (1.0).
 
 Here are the final results for this tutorial:
 
@@ -503,18 +733,6 @@ Here are the final results for this tutorial:
 
 ---
 
-
-### Shader Parameters  
-
-| **Parameter**     | **Description**                                |
-| ----------------- | ---------------------------------------------- |
-| `_HeightScale`    | Controls the depth intensity of POM            |
-| `_NumberOfLayers` | Adjusts the precision of parallax calculation  |
-| `_Metallic`       | Controls how metallic the surface appears      |
-| `_Roughness`      | Affects surface roughness and light scattering |
-| `_NormalStrength` | Strength of normal map details                 |
-
----
 ## Performance Considerations  
 
 - **Use lower `NumberOfLayers` for better performance.**  

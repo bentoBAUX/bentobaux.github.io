@@ -16,20 +16,6 @@ in code. Click [here](https://github.com/bentoBAUX/Basic-Lighting-Models-in-HLSL
 <br/>
 <br/>
 
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Implemented Lighting Models](#implemented-lighting-models)
-    - [Lambert Lighting](#1-lambert-lighting)
-    - [Gouraud-Phong Lighting](#2-gouraud-phong-lighting)
-    - [Phong Lighting](#3-phong-lighting)
-    - [Blinn-Phong Lighting](#4-blinn-phong-lighting)
-    - [Flat Shading](#5-flat-shading)
-    - [Toon Shading](#6-toon-shading)
-    - [Oren-Nayar](#7-oren-nayar)
-    - [Cook-Torrance](#8-cook-torrance)
-
 ## Overview
 
 This project demonstrates different lighting techniques used in real-time computer graphics. The models implemented
