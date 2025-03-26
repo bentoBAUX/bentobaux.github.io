@@ -4,11 +4,11 @@ title: Parallax Mapping with Self Shadowing
 date: 2025-03-17 21:40 +0100
 author: bennett
 categories: [Computer Graphics & Simulations]
-tag: [parallax mapping, hlsl]
+tag: [parallax mapping, hlsl, self shadowing]
 math: true
 ---
 
-This project demonstrates Physically Based Parallax Occlusion Mapping (POM) with self-shadowing in **Unity's Built-In Render Pipeline using HLSL**. It compares three shading models: the Unity Standard Shader, Blinn-Phong (Empirical), and Cook-Torrance with Oren-Nayar (Physically Based).
+This project demonstrates Parallax Occlusion Mapping (POM) with self-shadowing in **Unity's Built-In Render Pipeline using HLSL**. It compares three shading models: the Unity Standard Shader, Blinn-Phong (Empirical), and Cook-Torrance with Oren-Nayar (Physically Based).
 
 This page is designed to help solidify one's understanding of parallax mapping and explore the advancements that enhance realism while maintaining a relatively low computational cost.
 
@@ -72,8 +72,6 @@ v2f vert(appdata v)
 
     return o;
 }
-
-
 ```
 In the fragment shader, we can then transform any world-space vector into tangent space using the TBN matrix:
 
@@ -94,7 +92,6 @@ fixed4 frag(v2f i) : SV_Target
 
     // Lighting and parallax code...
 }
-
 ```
 This ensures that our lighting and shadowing calculations align perfectly with the texture data — no matter how the surface is oriented in the world.
 
@@ -446,7 +443,6 @@ float2 SteepParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir
 
     return currentTexCoords;
 }
-
 ```
 
 Why does this work? What does it mean to check if the ``currentLayerDepth`` is bigger than the ``currentDepthMapValue``? The explanation is simpler than you think.
