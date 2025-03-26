@@ -47,19 +47,32 @@ Here’s how to compute this in the vertex shader:
 ```hlsl
 v2f vert(appdata v)
 {
-  v2f o;
-  o.pos = UnityObjectToClipPos(v.vertex);
-  o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
-  o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+    v2f o;
 
-  half3 worldNormal = UnityObjectToWorldNormal(v.normal);
-  half3 worldTangent = normalize(mul((float3x3)unity_ObjectToWorld, v.tangent));
-  float3 worldBitangent = normalize(cross(worldNormal, worldTangent) * v.tangent.w);
+    // Transform the vertex position to clip space for rendering
+    o.pos = UnityObjectToClipPos(v.vertex);
 
-  o.TBN = float3x3(worldTangent, worldBitangent, worldNormal);
+    // Convert the vertex position to world space (used for lighting/view direction)
+    o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
 
-  return o;
+    // Apply texture scaling and offset
+    o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+
+    // Convert the vertex normal from object to world space
+    half3 worldNormal = UnityObjectToWorldNormal(v.normal);
+
+    // Convert the vertex tangent from object to world space
+    half3 worldTangent = normalize(mul((float3x3)unity_ObjectToWorld, v.tangent));
+
+    // Compute the bitangent using the cross product and handedness (v.tangent.w)
+    float3 worldBitangent = normalize(cross(worldNormal, worldTangent) * v.tangent.w);
+
+    // Construct the TBN matrix for transforming directions into tangent space
+    o.TBN = float3x3(worldTangent, worldBitangent, worldNormal);
+
+    return o;
 }
+
 
 ```
 In the fragment shader, we can then transform any world-space vector into tangent space using the TBN matrix:
@@ -67,14 +80,21 @@ In the fragment shader, we can then transform any world-space vector into tangen
 ```hlsl
 fixed4 frag(v2f i) : SV_Target
 {
+    // Compute the view direction in world space (from fragment to camera)
     half3 v = normalize(_WorldSpaceCameraPos - i.worldPos);
+
+    // Get the main directional light direction in world space
     half3 l = normalize(_WorldSpaceLightPos0.xyz);
 
+    // Transform the view direction into tangent space using the TBN matrix
     half3 v_TS = normalize(mul(i.TBN, v));
+
+    // Transform the light direction into tangent space using the TBN matrix
     half3 l_TS = normalize(mul(i.TBN, l));
 
-    // Lighting and parallax code
+    // Lighting and parallax code...
 }
+
 ```
 This ensures that our lighting and shadowing calculations align perfectly with the texture data — no matter how the surface is oriented in the world.
 
@@ -609,7 +629,7 @@ And here are the results without the artefacts from before with the same layer c
 
 
 --- 
-## Self Shadowing
+## Self-Shadowing
 
 We have achieved what we sought to achieve - a relatively low-cost approach in enhancing realism by faking depth on a flat surface. 
 
@@ -622,11 +642,11 @@ To make our illusion even more convincing, we need to simulate this interaction 
 This is where **self-shadowing** comes into play.
 
 <!-- omit in toc -->
-#### Understanding Tangent Space and Light Direction
+#### Understanding the Light Vector In Tangent Space
 
 Before we can simulate self-shadowing, it’s important to understand how light vectors behave in this tangent space.
 
-**How Light Vectors Behave In Tangent Space**
+**How does the light vector behave in tangent space?**
 
 In tangent space, the surface is aligned like this:
 
@@ -638,7 +658,7 @@ In tangent space, the surface is aligned like this:
 
 So a light shining from in front of the surface will point toward $$−z$$ in tangent space. This is why the $$z$$ component of the light vector becomes so important for self-shadowing.
 
-**What to Do With This Information**
+**What can we do with this information?**
 
 Now that we know how to interpret light direction in tangent space, we can use the $$z$$ component to decide whether self-shadowing should be calculated at all.
 
@@ -650,7 +670,7 @@ if (lightDir.z >= 0.0) return 0.0;
 
 This keeps the shader efficient and ensures that shadow rays are only traced when the surface is lit from the front — where shadowing is visually meaningful.
 
-**Self Shadowing Algorithm**
+#### Self-Shadowing Algorithm
 
 Once we've confirmed that the light is in front of the surface (`lightDir.z < 0.0`), we can proceed with simulating how light rays interact with the surface detail described by the height map. The idea is to march along the light's direction in tangent space, checking if any elevated point along the path blocks the light.
 
@@ -730,28 +750,23 @@ Here are the final results for this tutorial:
 </table>
 
 </details>
+---
+
+## Afterword
+
+Thank you so much for reading, especially if you made it all the way to the end.
+
+Parallax mapping was one of the more confusing topics for me when I first started learning shaders. At first glance, it felt complex and maths-heavy, but once I understood the core idea, I realised it’s actually a very simple and elegant trick.
+
+I truly hope this post helped you see it the same way — and more importantly, helped you understand how and why it works. If you followed along and learned something new, that means a lot to me.
+
+Feel free to use and modify the shaders provided. And if you build something cool with them, I’d love to see it!
 
 ---
 
-## Performance Considerations  
-
-- **Use lower `NumberOfLayers` for better performance.**  
-- **Steep angles require more samples; consider LOD adjustments.**  
-- **Avoid overusing self-shadowing on high-performance constraints.**  
-
-## Future Improvements  
-
-- Add support for **dynamic tessellation**.  
-- Improve self-shadowing accuracy for extreme angles.  
-- Optimize performance with **adaptive sampling techniques**.  
-
-
 ## Credits  
 
-- Joey de Vries for his insightful tutorial on [LearnOpenGL](https://learnopengl.com/Advanced-Lighting/Parallax-Mapping), which provided a strong foundation for this project’s development.
-- Rabbid76 on [StackOverflow](https://stackoverflow.com/questions/55089830/adding-shadows-to-parallax-occlusion-map) for the tutorial on self shadowing for parallax mapping.
+- Joey de Vries, for his excellent tutorial on [LearnOpenGL](https://learnopengl.com/Advanced-Lighting/Parallax-Mapping). The core algorithm and structure used in this post are based on his original GLSL implementation, adapted here for HLSL.
+- Rabbid76, for their detailed answer on [StackOverflow](https://stackoverflow.com/questions/55089830/adding-shadows-to-parallax-occlusion-map), which helped guide the self-shadowing implementation.
 
-## License  
-
-This project is licensed under the **MIT License** – feel free to use, modify, and improve it! 🎨  
 
