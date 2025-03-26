@@ -24,7 +24,7 @@ This page is designed to help solidify one's understanding of parallax mapping a
 
 Have you ever seen those mind-bending [optical illusion street art](https://d36tnp772eyphs.cloudfront.net/blogs/1/2019/06/Edgar-Mueller-street-mural-optical-illusion-of-ice-cliff.jpg) that turns a flat sidewalk into a deep dark abyss? From the right angle, it feels like you are standing on the edge of a cliff, staring into the gaping unknown. You might even ask a friend to hold the camera while you carefully step on the painted "debris" to strike a frightened pose for your Instagram. This is the concept behind parallax mapping - shifting textures to trick your eyes into seeing real depth.
 
-This is the concept behind parallax mapping—shifting textures to trick your eyes into perceiving real depth.
+This is the concept behind parallax mapping — shifting textures to trick your eyes into perceiving real depth.
 
 ---
 
@@ -128,7 +128,7 @@ float parallaxShadows = SelfShadowing(_Depth, texCoords, l_TS, _NumberOfLayers, 
 return ambient + (diffuse + specular) * parallaxShadows;
 ```
 
-Don't worry if you have problems setting this up. You may use the [Blinn-Phong](https://github.com/bentoBAUX/Physically-Based-Parallax-Occlusion-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Blinn-Phong.shader) and [Cook-Torrance](https://github.com/bentoBAUX/Physically-Based-Parallax-Occlusion-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Cook-Torrance.shader) shaders that I have wrote for this tutorial. [Here](https://github.com/bentoBAUX/Physically-Based-Parallax-Occlusion-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Parallax-Mapping.hlsl) you can also find the complete parallax mapping shader for this tutorial.
+Don’t worry if you run into any setup issues. You can use the shaders I wrote for this tutorial: [Blinn-Phong](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Blinn-Phong.shader), [Cook-Torrance](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Cook-Torrance.shader), and the complete [Parallax Mapping](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Parallax-Mapping.hlsl) shader. You can also check out the full repository [here](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing).
 
 <details>
   <summary><strong>Shader Parameters – Blinn-Phong</strong></summary>
