@@ -3,16 +3,20 @@ layout: post
 title: Basic Lighting Models in HLSL Unity
 author: bennett
 date: 2025-02-20 17:07 +0100
-categories: [Computer Graphics & Simulations]
+categories: [Computer Graphics]
 tag: [hlsl, unity, lighting, shader]
 math: true
+image: "/assets/img/basic-lighting-hlsl/Icon-Transparent.png"
+hide_header_image: true  
 ---
 
-{% include embed/youtube.html id='PEVGSzxCQBc' %}
+<!-- {% include embed/youtube.html id='PEVGSzxCQBc' %} -->
 
 This post outlines several basic lighting models implemented in Unity using HLSL (High-Level Shading Language).
 Each lighting model is explained with its corresponding mathematical formulation and a breakdown of how it's implemented
-in code. Click [here](https://github.com/bentoBAUX/Basic-Lighting-Models-in-HLSL) for the repository and feel free to watch the demo video before we get started!
+in code. 
+
+You can find the [full repository](https://github.com/bentoBAUX/Basic-Lighting-Models-in-HLSL) on GitHub, along with a [demo video](https://youtu.be/PEVGSzxCQBc) showcasing the results.
 <br/>
 <br/>
 
