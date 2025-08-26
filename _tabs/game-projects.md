@@ -2,12 +2,34 @@
 layout: page
 permalink: /game-projects/
 icon: fas fa-gamepad
-order: 2
+order: 1
 toc: true
 ---
 ---
 
+## **Forgotten Colors**
+<div align="center">
+  <img src="/assets/img/forgotten-colors/preview.jpg" alt="Forgotten Colors" width="100%">
+</div>  
 
+**🔗[Play on itch.io](https://felipe-lucas.itch.io/forgotten-colors)**  
+
+Featured in [**Raw Talent Booth @gamescom 2025**](https://rawtalentbooth.com), *Forgotten Colors* is a third-person puzzle-platformer set in a world where emotions shape reality. In this realm, those who cling too tightly to a single emotion risk losing their other “colours,” becoming ghosts bound to the physical world.
+
+As a ghost binder, you must help Miyu recover her lost colours and guide her to the afterlife.
+
+### **My Role**
+
+As the sole artist and technical artist in our 8-person team, I was responsible for the entire visual direction of the game. My work included:
+- **Capturing a sumi-e inspired style** and translating it into a cohesive 3D world.
+- **Character design and modelling** for the game world.
+- **Shader development** to achieve stylised visual effects.
+- **Art direction and overall aesthetic cohesion** to support the game’s emotional themes.
+- **Poster and graphic design** for marketing materials, including the official Gamescom 2025 showcase assets.
+
+You can read more about my shader development and research process [**here**](/posts/forgotten-colors-capturing-the-sumi-e-in-3d).
+
+---
 
 ## Tail as Old as Time  
 <div align="center">
@@ -20,7 +42,7 @@ An exploration-driven puzzle game where you play as a curious cat uncovering the
 
 What does that glowing symbol mean? Why does that stone shift when you step on it? Discovery is its own reward, as you slowly unravel the mystery surrounding the arcane sculpture at the heart of the temple.
 
-This game is built to **demonstrate a custom [HLSL toon shader](https://bentobaux.github.io/posts/basic-lighting-models-in-hlsl/#6-toon-shading)**, designed to bring **stylised lighting, vibrant contrast, and hand-crafted shading techniques** to life in a real-time environment.
+This game is built to **demonstrate a custom [HLSL toon shader](/posts/basic-lighting-models-in-hlsl/#6-toon-shading)**, designed to bring **stylised lighting, vibrant contrast, and hand-crafted shading techniques** to life in a real-time environment.
 
 ### **Features**  
 - **Exploration-driven gameplay**—navigate the temple using curiosity and observation.  

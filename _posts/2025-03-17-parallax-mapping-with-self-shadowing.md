@@ -3,8 +3,9 @@ layout: post
 title: Parallax Mapping with Self Shadowing
 date: 2025-03-17 21:40 +0100
 author: bennett
-categories: [Computer Graphics & Simulations]
+categories: [Computer Graphics]
 tag: [parallax mapping, hlsl, self shadowing]
+image: "/assets/img/parallax/GIF.gif"
 math: true
 ---
 
@@ -12,11 +13,13 @@ This project demonstrates Parallax Occlusion Mapping (POM) with self-shadowing i
 
 This page is designed to help solidify one's understanding of parallax mapping and explore the advancements that enhance realism while maintaining a relatively low computational cost.
 
-<p align="center">
+Full demo on YouTube [here](https://youtu.be/XEOFwgZYHSo)!
+
+<!-- <p align="center">
     <a href="https://youtu.be/XEOFwgZYHSo"><img src="/assets/img/parallax/GIF.gif" alt="Example showcase GIF"/></a>
   <br>
   <em><a href="https://youtu.be/XEOFwgZYHSo">Watch the showcase on YouTube</a></em>
-</p>
+</p> -->
 
 
 
@@ -303,15 +306,15 @@ With this information, we can now compute the displaced texture coordinates for 
 
 Firstly, we must **retrieve the depth value** for the current pixel we are computing for. This can be simply done by sampling the depth map with the interpolated UVs for the current pixel. 
 
->The depth values and depth maps we talk about here are not to be confused with the depth values and depth maps associated with the **depth buffer**!
-{: .prompt-warning}
-
 ```hlsl
 float2 ParallaxMapping(sampler2D depthMap, float2 texCoords, float3 viewDir, float depthScale)
 {
   float depth = tex2D(depthMap, texCoords).r;
 }
 ```
+>The depth values and depth maps we talk about here are not to be confused with the depth values and depth maps associated with the **depth buffer**!
+{: .prompt-warning}
+
 We can now calculate the shift in the form of a vector $$p$$, which depends on the viewing angle and the depth value. The key idea is to **increase the shift when viewing the surface at an angle, and reduce it when looking straight down**. To understand this better, let's analyse how $$viewDir$$ behaves.
 
 <img src="/assets/img/parallax/Visualisation/viewDir_vis.gif" alt="viewDir visualisation GIF"/>
@@ -372,7 +375,7 @@ Below are the results of this implementation in two different lighting models, *
   <thead>
     <tr>
       <th>Blinn-Phong (Empirical)</th>
-      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+      <th>Cook-Torrance (Physical)</th>
     </tr>
   </thead>
   <tbody>
@@ -518,7 +521,7 @@ Finally, here are the results of our new approach.
   <thead>
     <tr>
       <th>Blinn-Phong (Empirical)</th>
-      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+      <th>Cook-Torrance (Physical)</th>
     </tr>
   </thead>
   <tbody>
@@ -607,7 +610,7 @@ And here are the results without the artefacts from before with the same layer c
   <thead>
     <tr>
       <th>Blinn-Phong (Empirical)</th>
-      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+      <th>Cook-Torrance (Physical)</th>
     </tr>
   </thead>
   <tbody>
@@ -730,7 +733,7 @@ Here are the final results for this tutorial:
   <thead>
     <tr>
       <th>Blinn-Phong (Empirical)</th>
-      <th>Cook-Torrance + Oren-Nayar (Physically Based)</th>
+      <th>Cook-Torrance (Physical)</th>
     </tr>
   </thead>
   <tbody>
