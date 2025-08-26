@@ -13,7 +13,7 @@ hidden: true
 In this post, I share the approaches I explored to achieve the Sumi-e (水墨画) aesthetic for [*Forgotten Colors*](https://felipe-lucas.itch.io/forgotten-colors), a third-person puzzle-platformer where emotions shape reality. Players use talismans to shift the emotional state of each level, transforming both object behaviour and the appearance of the world. Since emotions and atmosphere are central to the experience, the visual style became a crucial part of development.
 
 
-You can find the source code for the shaders on GitHub [here]().
+You can find the source code for the shaders on GitHub here.
 
 ---
 
