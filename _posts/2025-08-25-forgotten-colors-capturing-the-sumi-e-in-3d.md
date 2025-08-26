@@ -41,7 +41,8 @@ Without a clear starting point, I explored several ideas, starting with adapting
 
 ## First Approach: Reverse-Engineered Lit Shader
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis eget molestie orci. Aenean non bibendum orci, eu ornare nisl. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In in ligula ligula. Duis non magna placerat, iaculis nunc bibendum, faucibus mauris. In at urna eget velit convallis venenatis ac eget tellus. Praesent pulvinar nisi purus, quis imperdiet ante volutpat non. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur ut nunc vel magna faucibus feugiat. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Etiam faucibus lacinia ligula, id commodo quam finibus eu. Aliquam ac sollicitudin lorem. Cras lectus dolor, consectetur volutpat velit a, gravida gravida ipsum. Sed ligula felis, egestas sollicitudin tempor non, commodo nec tortor.
+![First Approach](/assets/img/forgotten-colors/old%20shader/old-shader.gif)
+
 
 ---
 
