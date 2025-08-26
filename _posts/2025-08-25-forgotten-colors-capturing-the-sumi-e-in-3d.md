@@ -22,7 +22,9 @@ At the beginning, we only knew that the game should have a stylised and painterl
 
 Rather than simply copying the traditional monotone sumi-e style, however, our goal was to communicate emotions directly through the levels, which led us to expand the palette with additional colour themes beyond black and white. 
 
-As the sole artist and technical artist on the team, I was responsible for translating this vision into the game’s visuals. My work included creating concept art, developing shaders, and exploring different techniques to achieve the painterly sumi-e look. Without a clear starting point, I explored several ideas, starting with adapting a shader I had previously created for my personal 3D render challenge submission [*Boss Fight*](https://youtu.be/TfwCpTyKdX0), by turning the toon shader into a painterly or watercolour style by adjusting the noise and its contrast.
+As the sole artist and technical artist on the team, I was responsible for translating this vision into the game’s visuals. This included designing and modelling the main character, creating concept art, and developing shaders to establish the sumi-e look. 
+
+Without a clear starting point, I explored several ideas, starting with adapting a shader I had previously created for my personal 3D render challenge submission [*Boss Fight*](https://youtu.be/TfwCpTyKdX0), by turning the toon shader into a painterly or watercolour style by adjusting the noise and its contrast.
 
 {% include compare-slider.html
    before="/assets/img/forgotten-colors/early-concept-light.png"
