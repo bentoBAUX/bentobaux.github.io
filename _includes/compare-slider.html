@@ -4,24 +4,31 @@
 {% assign alt_after = include.alt_after | default: 'After' %}
 {% assign start = include.start | default: 50 %}
 {% assign caption = include.caption | default: '' %}
+{% assign max_w = include.max_width | default: '100%' %}
+
+/* unique id per instance */
+{% capture _uid %}{% increment ba_uid %}{% endcapture %}
+{% assign _id = include.id | default: 'ba-' | append: _uid %}
 
 <style>
-  .ba-wrap{position:relative;max-width:{{ include.max_width | default: '100%' }};margin:0.25rem 0;}
+  .ba-wrap{position:relative;max-width:{{ max_w }};margin:0.25rem 0;line-height:0;user-select:none;touch-action:none}
   .ba-wrap img{display:block;width:100%;height:auto;user-select:none;pointer-events:none}
-  .ba-top{position:absolute;inset:0;overflow:hidden}
-  .ba-handle{position:absolute;top:0;bottom:0;width:2px;background:currentColor;opacity:.9;cursor:ew-resize;}
+  .ba-top{position:absolute;inset:0;overflow:hidden;z-index:1}
+  .ba-handle{position:absolute;top:0;bottom:0;width:2px;background:currentColor;opacity:.9;cursor:ew-resize;z-index:3}
   .ba-grip{position:absolute;top:50%;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:999px;border:2px solid currentColor;background:rgba(255,255,255,.85);display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.15)}
   .ba-grip::before{content:"↔";font-size:14px;line-height:1}
-  .ba-caption{text-align:center;font-size:.9rem;margin-bottom:1rem;color:var(--text-muted,#666);}
+  .ba-caption{text-align:center;font-size:.9rem;margin:.25rem 0 1rem;color:var(--text-muted,#666)}
   @media (prefers-color-scheme: dark){.ba-grip{background:rgba(0,0,0,.5)}}
 </style>
 
-<div class="ba-wrap" role="group" aria-label="Before and after image comparison">
+<div class="ba-wrap" id="{{ _id }}" role="group" aria-label="Before and after image comparison">
   <img src="{{ after }}" alt="{{ alt_after }}">
   <div class="ba-top" style="clip-path: inset(0 {{ 100-start }}% 0 0);">
     <img src="{{ before }}" alt="{{ alt_before }}">
   </div>
-  <div class="ba-handle" style="left: {{ start }}%;"><div class="ba-grip" style="left: {{ start }}%;"></div></div>
+  <div class="ba-handle" style="left: {{ start }}%;">
+    <div class="ba-grip" style="left: {{ start }}%;"></div>
+  </div>
 </div>
 {% if caption != '' %}
   <div class="ba-caption">{{ caption }}</div>
@@ -29,56 +36,50 @@
 
 <script>
   (function(){
-    const script = document.currentScript;
-    const wrap = script.previousElementSibling.previousElementSibling; // ba-wrap div
-    if(!wrap) return;
-    const top = wrap.querySelector('.ba-top');
-    const handle = wrap.querySelector('.ba-handle');
-    const grip = wrap.querySelector('.ba-grip');
+    // Defer until DOM is ready (helps on GitHub Pages)
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init, {once:true});
+    } else { init(); }
 
-    function setSplit(pct){
-      pct = Math.max(0, Math.min(100, pct));
-      top.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
-      handle.style.left = pct + '%';
-      grip.style.left = pct + '%';
+    function init(){
+      var wrap = document.getElementById('{{ _id }}');
+      if(!wrap) return;
+
+      var top = wrap.querySelector('.ba-top');
+      var handle = wrap.querySelector('.ba-handle');
+      var grip = wrap.querySelector('.ba-grip');
+
+      function setSplit(pct){
+        pct = Math.max(0, Math.min(100, pct));
+        top.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
+        handle.style.left = pct + '%';
+        grip.style.left = pct + '%';
+      }
+      setSplit({{ start }});
+
+      function pointerToPct(e){
+        var rect = wrap.getBoundingClientRect();
+        var cx = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0].clientX);
+        return ((cx - rect.left) / rect.width) * 100;
+      }
+
+      var dragging = false;
+      function startDrag(e){ dragging = true; setSplit(pointerToPct(e)); e.preventDefault(); }
+      function moveDrag(e){ if (dragging) { setSplit(pointerToPct(e)); e.preventDefault(); } }
+      function endDrag(){ dragging = false; }
+
+      wrap.addEventListener('pointerdown', startDrag);
+      window.addEventListener('pointermove', moveDrag);
+      window.addEventListener('pointerup', endDrag);
+
+      wrap.addEventListener('mousedown', startDrag);
+      window.addEventListener('mousemove', moveDrag);
+      window.addEventListener('mouseup', endDrag);
+
+      wrap.addEventListener('touchstart', startDrag, {passive:false});
+      window.addEventListener('touchmove', moveDrag, {passive:false});
+      window.addEventListener('touchend', endDrag);
+      window.addEventListener('touchcancel', endDrag);
     }
-    setSplit({{ start }});
-
-    function pointerToPct(e){
-      const rect = wrap.getBoundingClientRect();
-      const cx = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0].clientX);
-      return ((cx - rect.left) / rect.width) * 100;
-    }
-
-    let dragging = false;
-    const startDrag = e => { dragging = true; setSplit(pointerToPct(e)); e.preventDefault(); };
-    const moveDrag  = e => { if (dragging) { setSplit(pointerToPct(e)); e.preventDefault(); } };
-    const endDrag   = () => { dragging = false; };
-
-    wrap.addEventListener('pointerdown', startDrag);
-    window.addEventListener('pointermove', moveDrag);
-    window.addEventListener('pointerup', endDrag);
-
-    wrap.addEventListener('mousedown', startDrag);
-    window.addEventListener('mousemove', moveDrag);
-    window.addEventListener('mouseup', endDrag);
-
-    wrap.addEventListener('touchstart', startDrag, {passive:false});
-    window.addEventListener('touchmove', moveDrag, {passive:false});
-    window.addEventListener('touchend', endDrag);
-    window.addEventListener('touchcancel', endDrag);
   })();
 </script>
-
-{% comment %}
-USAGE:
-{% include compare-slider.html
-   before="/assets/img/forgotten-colors/early-concept-light.png"
-   after="/assets/img/forgotten-colors/early-concept-dark.png"
-   alt_before="Raw albedo"
-   alt_after="Sumi-e shaded"
-   start=45
-   max_width="1920px"
-   caption="Early visual exploration of contrasting emotions prior to adopting the sumi-e aesthetic"
-%}
-{% endcomment %}
