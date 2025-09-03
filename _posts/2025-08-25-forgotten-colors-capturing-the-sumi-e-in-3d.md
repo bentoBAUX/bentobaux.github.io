@@ -71,7 +71,7 @@ Working in Blender first also made it clear what was technically possible, which
 
 Now that I am convinced that it is technically achievable, I began reverse engineering the shader nodes. 
 
-The original Blender graph consisted of four main components: Voronoi Noise, fBM Noise, Principled BSDF, and a Colour Ramp. I simplified this to just three parts: Voronoi Noise, Blinn-Phong Lighting, and a Colour Ramp. Despite the reduction, the shader still produces the same overall visual effect:
+The original Blender graph consisted of five main components: Voronoi Noise, fBM Noise, Principled BSDF, Linear Light and a Colour Ramp. I simplified this to just three parts: Voronoi Noise, Blinn-Phong Lighting, and a Colour Ramp. Despite the reduction, the shader still produces the same overall visual effect:
 
 {% include compare-slider.html
    before="/assets/img/forgotten-colors/old%20shader/unity-render.gif"
@@ -128,20 +128,24 @@ Below is the key fragment section: the Voronoi feature points gently disturb the
 ```
 <figcaption class="ba-caption">Full Unity shader (fragment + support functions) on GitHub: <a href="https://github.com/bentoBAUX/Sumi-e-in-3D" target="_blank" rel="noopener">View source</a>.</figcaption>
 
-It looked great in isolation, but it fell apart once placed in the actual scene. The method depended heavily on clean topology and UVs, yet most level geometry remained quick ProBuilder blockouts (uneven polygon density, stretched or auto UVs, random hard edges, long thin triangles). Cleaning them up by producing proper assets (retopology, UV packing, consistent texel density, controlled smoothing groups) was out of scope while we were also handling exams. The shader then needed per-object tweaking of noise scale, ramp thresholds and normal smoothing, and every material relied on a fixed six step colour ramp that became unmanageable at scene scale. 
+It looked great in isolation, but it fell apart once placed in the actual scene. The method depended heavily on clean topology and UVs, yet most of the level geometry consisted of quick ProBuilder blockouts with awkward topology and unintuitive UV editing. Producing proper assets with retopology, UV packing, and consistent texel density was out of scope while we were also preparing for exams. As a result, the shader required per-object tweaking of every property, where every material relied on a fixed six-step colour ramp that became unmanageable at scene scale.
 
-Furthermore, to achieve the painterly look I could not rely on surface normals, since on large flat faces they all point in the same direction and would have produced flat, uniform colours. This issue was especially pronounced because much of the scene was built from simple, flat shapes. Instead, I used generated texture coordinates, similar to Blender’s Generated UVs, by remapping the object’s local position into the [0,1] range. 
+To achieve the painterly look I could not rely on surface normals, since on large flat faces they all point in the same direction and would have produced flat, uniform colours. This issue was especially pronounced because much of the scene was built from simple, flat shapes. Instead, I used generated texture coordinates, similar to Blender’s *Generated UVs*, by remapping the object’s local position into the [0,1] range. 
 
-While this gave me the variation I wanted, it also introduced shadow artefacts. On large surfaces, the cascaded shadow splits left part of a polygon unshadowed while the rest was shaded correctly. This produced incomplete shadow coverage, with small areas near the edges of a shadowed face still appearing lit even though they should have been completely dark. Because the painterly shading was tied to generated coordinates rather than surface normals, these mismatches became very visible, exaggerating seams, banding, and missing shadows.
+While this gave me the variation I wanted, it also introduced shadow artefacts. On large surfaces, there was incomplete shadow coverage, where small areas near the edges of a shadowed face were still lit even though they should have been completely dark. This happened because of the simplification I made earlier. I used the generated coordinates directly into the Voronoi noise and used its position output in place of the surface normal for Blinn–Phong lighting. In other words, the shading was no longer tied to the true surface normal, so the shadow test and the lighting calculation did not align. This is a known side-effect that can even be reproduced in Blender when shading with generated coordinates. 
 
-{% include add-image-with-caption.html
-   src="/assets/img/forgotten-colors/old%20shader/shadow-artefact.png"
-   alt="Unity Render"
-   caption="Example of incomplete shadowing caused by the generated texture coordinates"
+{% include compare-slider.html
+   before="/assets/img/forgotten-colors/old%20shader/shadow-artefact.png"
+   after="/assets/img/forgotten-colors/old%20shader/shadow-artefact-blender.png"
+   alt_before="Unity"
+   alt_after="Blender"
+   start=45
    max_width="1920px"
+   caption="Incomplete shadowing caused by the generated texture coordinates in Unity (left) and Blender (right)"
 %}
 
-And to reiterate the tediousness of per-object tweaking, this is an example issue that we had when the level was built quickly with ProBuilder due to time constraints. The auto-generated topology and UVs often produced inconsistent shading, even on flat faces, which meant the same shader settings could look correct on one object and completely off on another.
+
+To reiterate the tediousness of per-object tweaking, this is an example issue that we had when the level was built quickly with ProBuilder due to time constraints. The auto-generated topology and UVs often produced inconsistent shading, even on flat faces, which meant the same shader settings could look correct on one object and completely off on another.
 
 {% include add-image-with-caption.html
    src="/assets/img/forgotten-colors/old%20shader/cake-artefact.png"
