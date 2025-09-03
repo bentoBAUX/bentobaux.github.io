@@ -9,7 +9,7 @@ toc: true
 
 ## **Forgotten Colors**
 <div align="center">
-  <img src="/assets/img/forgotten-colors/preview.jpg" alt="Forgotten Colors" width="100%">
+  <img src="/assets/img/forgotten-colors/previews/preview.jpg" alt="Forgotten Colors" width="100%">
 </div>  
 
 **🔗[Play on itch.io](https://felipe-lucas.itch.io/forgotten-colors)**  
