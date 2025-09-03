@@ -6,7 +6,6 @@
 {% assign caption = include.caption | default: '' %}
 {% assign max_w = include.max_width | default: '100%' %}
 
-/* unique id per instance */
 {% capture _uid %}{% increment ba_uid %}{% endcapture %}
 {% assign _id = include.id | default: 'ba-' | append: _uid %}
 
@@ -35,51 +34,77 @@
 {% endif %}
 
 <script>
-  (function(){
-    // Defer until DOM is ready (helps on GitHub Pages)
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init, {once:true});
-    } else { init(); }
+(function(){
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, {once:true});
+    console.log("compare-slider: waiting for DOMContentLoaded");
+  } else {
+    console.log("compare-slider: DOM already loaded");
+    init();
+  }
 
-    function init(){
-      var wrap = document.getElementById('{{ _id }}');
-      if(!wrap) return;
+  function init(){
+    console.log("compare-slider: init running");
 
-      var top = wrap.querySelector('.ba-top');
-      var handle = wrap.querySelector('.ba-handle');
-      var grip = wrap.querySelector('.ba-grip');
+    var wrap = document.getElementById('{{ _id }}');
+    console.log("compare-slider: wrap =", wrap);
 
-      function setSplit(pct){
-        pct = Math.max(0, Math.min(100, pct));
-        top.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
-        handle.style.left = pct + '%';
-        grip.style.left = pct + '%';
-      }
-      setSplit({{ start }});
-
-      function pointerToPct(e){
-        var rect = wrap.getBoundingClientRect();
-        var cx = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0].clientX);
-        return ((cx - rect.left) / rect.width) * 100;
-      }
-
-      var dragging = false;
-      function startDrag(e){ dragging = true; setSplit(pointerToPct(e)); e.preventDefault(); }
-      function moveDrag(e){ if (dragging) { setSplit(pointerToPct(e)); e.preventDefault(); } }
-      function endDrag(){ dragging = false; }
-
-      wrap.addEventListener('pointerdown', startDrag);
-      window.addEventListener('pointermove', moveDrag);
-      window.addEventListener('pointerup', endDrag);
-
-      wrap.addEventListener('mousedown', startDrag);
-      window.addEventListener('mousemove', moveDrag);
-      window.addEventListener('mouseup', endDrag);
-
-      wrap.addEventListener('touchstart', startDrag, {passive:false});
-      window.addEventListener('touchmove', moveDrag, {passive:false});
-      window.addEventListener('touchend', endDrag);
-      window.addEventListener('touchcancel', endDrag);
+    if(!wrap) {
+      console.warn("compare-slider: wrap not found for id {{ _id }}");
+      return;
     }
-  })();
+
+    var top = wrap.querySelector('.ba-top');
+    var handle = wrap.querySelector('.ba-handle');
+    var grip = wrap.querySelector('.ba-grip');
+    console.log("compare-slider: found elements", {top, handle, grip});
+
+    function setSplit(pct){
+      pct = Math.max(0, Math.min(100, pct));
+      top.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
+      handle.style.left = pct + '%';
+      grip.style.left = pct + '%';
+    }
+    setSplit({{ start }});
+    console.log("compare-slider: initial split set to {{ start }}%");
+
+    function pointerToPct(e){
+      var rect = wrap.getBoundingClientRect();
+      var cx = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0].clientX);
+      return ((cx - rect.left) / rect.width) * 100;
+    }
+
+    var dragging = false;
+    function startDrag(e){
+      console.log("compare-slider: drag start", e.type);
+      dragging = true;
+      setSplit(pointerToPct(e));
+      e.preventDefault();
+    }
+    function moveDrag(e){
+      if (dragging) {
+        setSplit(pointerToPct(e));
+      }
+    }
+    function endDrag(){
+      if (dragging) console.log("compare-slider: drag end");
+      dragging = false;
+    }
+
+    wrap.addEventListener('pointerdown', startDrag);
+    window.addEventListener('pointermove', moveDrag);
+    window.addEventListener('pointerup', endDrag);
+
+    wrap.addEventListener('mousedown', startDrag);
+    window.addEventListener('mousemove', moveDrag);
+    window.addEventListener('mouseup', endDrag);
+
+    wrap.addEventListener('touchstart', startDrag, {passive:false});
+    window.addEventListener('touchmove', moveDrag, {passive:false});
+    window.addEventListener('touchend', endDrag);
+    window.addEventListener('touchcancel', endDrag);
+
+    console.log("compare-slider: event listeners attached");
+  }
+})();
 </script>
