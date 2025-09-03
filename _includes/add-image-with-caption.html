@@ -1,0 +1,44 @@
+{% assign src = include.src %}
+{% assign alt = include.alt | default: '' %}
+{% assign caption = include.caption | default: '' %}
+{% assign max_w = include.max_width | default: '100%' %}
+
+<style>
+  .fig-wrap {
+    position: relative;
+    max-width: {{ max_w }};
+    margin: 0.25rem auto;
+    user-select: none;
+  }
+  .fig-wrap img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    pointer-events: none;
+  }
+  .ba-caption {
+    text-align: center;
+    font-size: .9rem;
+    margin-bottom: 1rem;
+    color: var(--text-muted, #666);
+  }
+</style>
+
+<div class="fig-wrap" style="max-width: {{ max_w }};">
+  <img src="{{ src }}" alt="{{ alt }}">
+</div>
+{% if caption != '' %}
+  <div class="ba-caption">{{ caption }}</div>
+{% endif %}
+
+{% comment %}
+  USAGE:
+
+  {% include add-image.html
+     src="/assets/img/forgotten-colors/scene.jpg"
+     alt="Temple entrance carved into the mountain"
+     caption="Temple entrance — final concept paintover"
+     max_width="900px"
+  %}
+{% endcomment %}

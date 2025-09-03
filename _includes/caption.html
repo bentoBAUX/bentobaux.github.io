@@ -1,0 +1,43 @@
+{% comment %}
+  Simple caption include.
+  Usage:
+    {% include caption.html text="Figure 1 – Temple entrance" %}
+    {% include caption.html text="Full shader source" url="https://github.com/your/repo" %}
+  Params:
+    text (or caption): required string
+    url (optional): link to wrap the text
+{% endcomment %}
+
+{% assign text = include.text | default: include.caption | default: '' %}
+{% if text == '' %}{% break %}{% endif %}
+{% assign url = include.url | default: '' %}
+
+<style>
+  .ba-caption {
+    text-align: center;
+    font-size: 0.9rem;
+    margin: 0.4rem 0 1rem;
+    color: var(--text-muted, #666);
+  }
+  .ba-caption a {
+    color: inherit;
+    text-decoration: underline;
+  }
+</style>
+
+<figcaption class="ba-caption">
+  {% if url != '' %}
+    <a
+      href="{{ url }}"
+      {% unless url contains '://' %}
+        {{- '' | relative_url -}}
+      {% endunless %}
+      target="_blank"
+      rel="noopener"
+    >
+      {{- text -}}
+    </a>
+  {% else %}
+    {{ text }}
+  {% endif %}
+</figcaption>
