@@ -7,13 +7,12 @@ categories: [Computer Graphics]
 tag: [sumi-e, hlsl, painterly, shader]
 math: true
 image: "/assets/img/forgotten-colors/previews/house.png"
-hidden: true
 ---
 
-In this post, I share the approaches I explored to achieve the Sumi-e (水墨画) aesthetic for [*Forgotten Colors*](https://felipe-lucas.itch.io/forgotten-colors), a third-person puzzle-platformer where emotions shape reality. Players use talismans to shift the emotional state of each level, transforming both object behaviour and the appearance of the world. Since emotions and atmosphere are central to the experience, the visual style became a crucial part of development.
+In this post, I share the approaches I explored to achieve the Sumi-e (水墨画) aesthetic for [**Forgotten Colors**](https://felipe-lucas.itch.io/forgotten-colors), a third-person puzzle-platformer where emotions shape reality. Players use talismans to shift the emotional state of each level, transforming both object behaviour and the appearance of the world. Since emotions and atmosphere are central to the experience, the visual style became a crucial part of development.
 
 
-You can find the source code for the shaders on GitHub [here](https://github.com/bentoBAUX/Sumi-e-in-3D).
+You can find the source code for the shaders on GitHub [**here**](https://github.com/bentoBAUX/Sumi-e-in-3D).
 
 ---
 
@@ -32,7 +31,7 @@ Rather than simply copying the traditional monotone sumi-e style, however, our g
 
 As the sole artist and technical artist on the team, I was responsible for translating this vision into the game’s visuals. This included designing and modelling the main character, creating concept art, and developing shaders to establish the sumi-e look. 
 
-Without a clear starting point, I explored several ideas, starting with adapting a shader I had previously created for my personal 3D render challenge submission [***Boss Fight***](https://youtu.be/TfwCpTyKdX0), by turning the toon shader into a painterly or watercolour style by adjusting the noise and its contrast.
+Without a clear starting point, I explored several ideas, starting with adapting a shader I had previously created for my personal 3D render challenge submission [**Boss Fight**](https://youtu.be/TfwCpTyKdX0), by turning the toon shader into a painterly or watercolour style by adjusting the noise and its contrast.
 
 {% include compare-slider.html
    before="/assets/img/forgotten-colors/previews/early-concept-light.png"
@@ -47,7 +46,7 @@ Without a clear starting point, I explored several ideas, starting with adapting
 
 ---
 
-## First Approach: Reverse-Engineered Lit Shader
+## First Approach: Reverse-Engineered Blender Shader
 
 <!-- - Talk about the blender shader
 - Talk about how i implemented it in hlsl
@@ -58,7 +57,7 @@ This was my first time developing such a stylised shader for a game in Unity. It
 
 To explore ideas quickly, I began experimenting in Blender. Playing around with nodes there was much faster and more flexible than constantly rewriting HLSL code. At the same time, I chose to implement the shader in Unity using HLSL because I it is simply more fun for me. 
 
-Working in Blender first also made it clear what was technically possible, which helped me identify when an issue in HLSL was just an implementation mistake rather than a limitation of the approach. So I started by smoothing the noises in the *Boss Fight* shader, adapted from [Kevandram](https://youtu.be/vRALvQSS1vw?t=703). This yielded promising results:
+Working in Blender first also made it clear what was technically possible, which helped me identify when an issue was just a me-problem rather than it being "impossible". So I started by smoothing the noises in the *Boss Fight* shader, adapted from [**Kevandram**](https://youtu.be/vRALvQSS1vw?t=703). This yielded promising results:
 
 {% include compare-slider.html
    before="/assets/img/forgotten-colors/old%20shader/blender-render.png"
@@ -127,7 +126,7 @@ Below is the key fragment section: the Voronoi feature points gently disturb the
         return half4(finalColour, 1.0);
     }
 ```
-<figcaption class="ba-caption">Full Unity shader (fragment + support functions) on GitHub: <a href="https://github.com/bentoBAUX/Sumi-e-in-3D" target="_blank" rel="noopener">View source</a>.</figcaption>
+<figcaption class="ba-caption">Full shader and support functions on GitHub: <a href="https://github.com/bentoBAUX/Sumi-e-in-3D" target="_blank" rel="noopener"><strong>View source</strong></a>.</figcaption>
 
 It looked great in isolation, but it fell apart once placed in the actual scene. The method depended heavily on clean topology and UVs, yet most of the level geometry consisted of quick ProBuilder blockouts with awkward topology and unintuitive UV editing. Producing proper assets with retopology, UV packing, and consistent texel density was out of scope while we were also preparing for exams. As a result, the shader required per-object tweaking of every property, where every material relied on a fixed six-step colour ramp that became unmanageable at scene scale.
 
@@ -163,13 +162,62 @@ Given the few months we had in a semester, this approach, although seemingly via
 
 ## Second Approach: Unlit Gradients and Stylised Tricks
 
-- Explain about Lars mentoring me
-- Explain the simple shader
-- Showcase
+It was around this time that I was privileged enough to get the opportunity to have a chat with [**Lars Grevsmühl**](https://www.linkedin.com/in/lars-h-grevsmühl-2a3611129), the developer of [**OKU**](https://store.steampowered.com/app/3590650/OKU). Lars was responsible for shaping OKU’s sumi-e aesthetics, and he shared a few valuable tips with me on how to achieve similar visuals in my own game. The solution turned out to be surprisingly straightforward.
 
+While I was stressing over scene lighting and trying to fix shadow artefacts, I overlooked that a simple unlit shader could achieve the effect with ease. In fact, unlit two-colour gradient materials were enough.
+
+{% include add-image-with-caption.html
+   src="/assets/img/forgotten-colors/new%20shader/second-approach-demo.gif"
+   alt="Unity Render"
+   caption="Demo of unlit two-colour gradient shader"
+   max_width="1080px"
+%}
+
+And the key fragment shader stripped of extra features:
+
+```hlsl
+// Derive coordinate system for procedural noise
+// "Texture Coordinate" node in Blender for sampling in Generated, Normal, UV, Object and World space
+float3 texCoord = GetTextureSpace(_TextureSpace, float3(0, 0, 0) /* Normals not needed here */, input.fragLocalPos, input.fragWorldPos, input.uv);
+
+float bandHalfWidth = saturate(_BandThickness / 2); // Remap to [0, 0.5] for maths
+
+float t = texCoord.y; // Gradient is based on y value.
+
+// Set interpolation types
+float fac;
+if (_InterpolationType == 1)
+{
+    fac = ramp_linear(t, _BandCentre, bandHalfWidth); // Linear Interpolation
+}
+else if (_InterpolationType == 2)
+{
+    fac = ramp_ease(t, _BandCentre, bandHalfWidth); // "Ease" Interpolation
+}
+
+float3 base = tex2D(_BaseTexture, input.uv).rgb;
+half3 finalColour = lerp(_LightTint.rgb, _DarkTint.rgb * base, fac);
+
+return half4(finalColour, _Alpha);
+```
+<figcaption class="ba-caption">Full shader and support functions on GitHub: <a href="https://github.com/bentoBAUX/Sumi-e-in-3D" target="_blank" rel="noopener"><strong>View source</strong></a>.</figcaption>
+
+This approach is simple yet effective. To enhance the scene with a more painterly feel, I overlaid a paper texture. Here are the results:
+
+{% include slide-show.html
+   slides='/assets/img/forgotten-colors/new shader/slideshow/1.png;
+           /assets/img/forgotten-colors/new shader/slideshow/2.png;
+           /assets/img/forgotten-colors/new shader/slideshow/3.png;
+           /assets/img/forgotten-colors/new shader/slideshow/4.png;
+           /assets/img/forgotten-colors/new shader/slideshow/5.png;'
+   max_width='1080px'
+   dots='true'
+   autoplay='true'
+   interval='4000'
+%}
 ---
 
-## Reflections and Next Steps
+## What could've been better?
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis eget molestie orci. Aenean non bibendum orci, eu ornare nisl. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In in ligula ligula. Duis non magna placerat, iaculis nunc bibendum, faucibus mauris. In at urna eget velit convallis venenatis ac eget tellus. Praesent pulvinar nisi purus, quis imperdiet ante volutpat non. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur ut nunc vel magna faucibus feugiat. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Etiam faucibus lacinia ligula, id commodo quam finibus eu. Aliquam ac sollicitudin lorem. Cras lectus dolor, consectetur volutpat velit a, gravida gravida ipsum. Sed ligula felis, egestas sollicitudin tempor non, commodo nec tortor.
 

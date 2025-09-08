@@ -1,0 +1,203 @@
+{% assign slides_str = include.slides | default: '' %}
+{% assign max_w = include.max_width | default: '100%' %}
+{% assign height = include.height | default: 'auto' %}
+{% assign dots = include.dots | default: 'true' %}
+{% assign autoplay = include.autoplay | default: 'false' %}
+{% assign interval = include.interval | default: 5000 %}
+
+{% capture _uid %}{% increment ss_uid %}{% endcapture %}
+{% assign _id = include.id | default: 'ss-' | append: _uid %}
+
+{% assign slide_rows = slides_str | split: ';' %}
+
+<style>
+  .ss-wrap{position:relative;max-width:{{ max_w }};margin:0.5rem 0;line-height:0;user-select:none;touch-action:pan-y}
+  .ss-viewport{position:relative;overflow:hidden;width:100%;height:{{ height }}}
+  .ss-track{display:flex;transition:transform .35s ease;will-change:transform;position:relative;z-index:1}
+  .ss-slide{flex:0 0 100%;position:relative}
+  .ss-slide img{display:block;width:100%;height:auto;user-select:none;pointer-events:none}
+  .ss-caption{position:absolute;left:0;right:0;bottom:.25rem;text-align:center;font-size:.9rem;color:var(--text-muted,#ccc)}
+  .ss-zoom{position:absolute;top:.5rem;right:.5rem;z-index:5;border:0;border-radius:999px;padding:.45rem;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
+  .ss-zoom svg{display:block;width:18px;height:18px}
+  .ss-controls{position:absolute;inset:0;z-index:2;pointer-events:none}
+  .ss-controls button{position:absolute;top:50%;transform:translateY(-50%);border:0;border-radius:999px;padding:.45rem;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;z-index:5;pointer-events:auto}
+  .ss-prev{left:.5rem}
+  .ss-next{right:.5rem}
+  .ss-controls svg{display:block;width:18px;height:18px}
+  .ss-dots{display:flex;gap:.4rem;justify-content:center;margin-top:.4rem}
+  .ss-dot{width:.5rem;height:.5rem;border-radius:999px;background:#bbb;opacity:.6;border:0;cursor:pointer}
+  .ss-dot[aria-current="true"]{opacity:1;background:#666}
+  .ba-caption{text-align:center;font-size:.9rem;margin:.25rem 0 1rem;color:var(--text-muted,#666)}
+  .ss-dialog::backdrop{background:rgba(0,0,0,.65)}
+  .ss-dialog{border:0;padding:0;background:transparent}
+  .ss-modal-frame{width:min(95vw,1400px);margin:5vh auto;background:transparent;position:relative}
+  .ss-modal-close{position:absolute;top:.5rem;right:.5rem;border:0;border-radius:999px;padding:.45rem;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;z-index:6}
+  @media (prefers-color-scheme: dark){
+    .ss-controls button,.ss-zoom,.ss-modal-close{background:rgba(0,0,0,.55)}
+    .ss-dot{background:#777}
+    .ss-dot[aria-current="true"]{background:#ddd}
+  }
+</style>
+
+<div class="ss-wrap" id="{{ _id }}" role="region" aria-label="Slideshow">
+  <div class="ss-viewport">
+    <div class="ss-track">
+      {%- for row in slide_rows -%}
+        {%- assign parts = row | strip | split: '|' -%}
+        {%- assign src = parts[0] | strip -%}
+        {%- assign alt = parts[1] | default: '' | strip -%}
+        {%- assign cap = parts[2] | default: '' | strip -%}
+        {%- if src != '' -%}
+          <figure class="ss-slide">
+            <img src="{{ src }}" alt="{{ alt }}">
+            <button class="ss-zoom" type="button" aria-label="Enlarge">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 10-.71.71l.27.28v.79L20 21.5 21.5 20l-6-6zm-6 0A4.5 4.5 0 1114 9.5 4.5 4.5 0 019.5 14z"/>
+              </svg>
+            </button>
+            {%- if cap != '' -%}
+              <figcaption class="ss-caption">{{ cap }}</figcaption>
+            {%- endif -%}
+          </figure>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+    <div class="ss-controls" aria-hidden="false">
+      <button class="ss-prev" type="button" aria-label="Previous">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+        </svg>
+      </button>
+      <button class="ss-next" type="button" aria-label="Next">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  {% if dots == 'true' %}
+    <div class="ss-dots" role="tablist" aria-label="Slide dots"></div>
+  {% endif %}
+</div>
+
+{% for row in slide_rows %}
+  {% assign parts = row | strip | split: '|' %}
+  {% assign src = parts[0] | strip %}
+  {% assign alt = parts[1] | default: '' | strip %}
+  <dialog class="ss-dialog" id="{{ _id }}-dlg-{{ forloop.index0 }}">
+    <div class="ss-modal-frame">
+      <button class="ss-modal-close" type="button" aria-label="Close">✕</button>
+      <img src="{{ src }}" alt="{{ alt }}" style="display:block;width:100%;height:auto;user-select:none;pointer-events:none">
+    </div>
+  </dialog>
+{% endfor %}
+
+<script>
+(function(){
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, {once:true});
+  } else { init(); }
+
+  function init(){
+    var root = document.getElementById('{{ _id }}');
+    if (!root) return;
+    var track = root.querySelector('.ss-track');
+    var slides = Array.prototype.slice.call(root.querySelectorAll('.ss-slide'));
+    var prevBtn = root.querySelector('.ss-prev');
+    var nextBtn = root.querySelector('.ss-next');
+    var dotsWrap = root.querySelector('.ss-dots');
+    var index = 0, count = slides.length;
+    if (count === 0) return;
+
+    if (dotsWrap) {
+      for (var i=0;i<count;i++){
+        var b = document.createElement('button');
+        b.className = 'ss-dot';
+        b.type = 'button';
+        b.setAttribute('role','tab');
+        b.setAttribute('aria-label','Go to slide ' + (i+1));
+        (function(iLocal){
+          b.addEventListener('click', function(){ go(iLocal); });
+        })(i);
+        dotsWrap.appendChild(b);
+      }
+    }
+
+    function update(){
+      var x = -index * 100;
+      track.style.transform = 'translateX(' + x + '%)';
+      if (dotsWrap) {
+        var dots = dotsWrap.querySelectorAll('.ss-dot');
+        for (var i=0;i<dots.length;i++){
+          dots[i].setAttribute('aria-current', i===index ? 'true' : 'false');
+        }
+      }
+    }
+
+    function clamp(n){ return (n + count) % count; }
+    function go(i){ index = clamp(i); update(); }
+    function next(){ go(index + 1); }
+    function prev(){ go(index - 1); }
+
+    if (prevBtn) prevBtn.addEventListener('click', prev);
+    if (nextBtn) nextBtn.addEventListener('click', next);
+
+    root.tabIndex = 0;
+    root.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight') { next(); }
+      else if (e.key === 'ArrowLeft') { prev(); }
+    });
+
+    var startX = null, dragging = false;
+    function isOnUi(el){ return el && (el.closest('.ss-controls') || el.closest('.ss-dots') || el.closest('.ss-zoom')); }
+
+    root.addEventListener('pointerdown', function(e){
+      if (isOnUi(e.target)) return;
+      dragging = true; startX = e.clientX;
+      if (root.setPointerCapture && e.pointerId !== undefined) {
+        try { root.setPointerCapture(e.pointerId); } catch(_) {}
+      }
+    });
+    root.addEventListener('pointermove', function(e){
+      if (!dragging) return;
+    });
+    root.addEventListener('pointerup', function(e){
+      if (!dragging) return;
+      var dx = e.clientX - startX; dragging = false;
+      if (Math.abs(dx) > 40) { if (dx < 0) next(); else prev(); }
+    });
+    root.addEventListener('pointercancel', function(){ dragging = false; });
+
+    root.addEventListener('mousedown', function(e){
+      if (isOnUi(e.target)) return;
+      dragging = true; startX = e.clientX;
+    });
+    document.addEventListener('mouseup', function(e){
+      if (!dragging) return;
+      var dx = e.clientX - startX; dragging = false;
+      if (Math.abs(dx) > 40) { if (dx < 0) next(); else prev(); }
+    });
+
+    {% if autoplay == 'true' %}
+    var timer = setInterval(next, {{ interval | plus: 0 }});
+    root.addEventListener('mouseenter', function(){ clearInterval(timer); });
+    root.addEventListener('mouseleave', function(){ timer = setInterval(next, {{ interval | plus: 0 }}); });
+    {% endif %}
+
+    slides.forEach(function(slide, i){
+      var zoomBtn = slide.querySelector('.ss-zoom');
+      var dlg = document.getElementById('{{ _id }}-dlg-' + i);
+      var closeBtn = dlg.querySelector('.ss-modal-close');
+      if (zoomBtn && dlg && closeBtn){
+        zoomBtn.addEventListener('click', function(){ if(!dlg.open) dlg.showModal(); });
+        closeBtn.addEventListener('click', function(){ dlg.close(); });
+        dlg.addEventListener('click', function(e){ if(e.target === dlg) dlg.close(); });
+      }
+    });
+
+    update();
+  }
+})();
+</script>
