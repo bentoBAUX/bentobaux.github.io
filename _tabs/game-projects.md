@@ -27,7 +27,7 @@ As the sole artist and technical artist in our 8-person team, I was responsible 
 - **Art direction and overall aesthetic cohesion** to support the game’s emotional themes.
 - **Poster and graphic design** for marketing materials, including the official Gamescom 2025 showcase assets.
 
-You can read more about my shader development and research process [**here**](/_posts/2025-08-25-forgotten-colors-capturing-sumi-e-in-3d.md).
+You can read more about my shader development and research process [**here**](posts/forgotten-colors-capturing-sumi-e-in-3d).
 
 ---
 
