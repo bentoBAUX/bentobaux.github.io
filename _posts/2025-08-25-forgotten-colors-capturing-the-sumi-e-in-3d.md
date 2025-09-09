@@ -217,8 +217,29 @@ This approach is simple yet effective. To enhance the scene with a more painterl
 %}
 ---
 
-## What could've been better?
+## Reflections
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis eget molestie orci. Aenean non bibendum orci, eu ornare nisl. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In in ligula ligula. Duis non magna placerat, iaculis nunc bibendum, faucibus mauris. In at urna eget velit convallis venenatis ac eget tellus. Praesent pulvinar nisi purus, quis imperdiet ante volutpat non. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur ut nunc vel magna faucibus feugiat. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Etiam faucibus lacinia ligula, id commodo quam finibus eu. Aliquam ac sollicitudin lorem. Cras lectus dolor, consectetur volutpat velit a, gravida gravida ipsum. Sed ligula felis, egestas sollicitudin tempor non, commodo nec tortor.
+At the time of writing this devlog, I have realised a few things I could have done better. For example, the main problem in my first approach came directly from a simplification I had made: I was not using the true surface normals anywhere in the shader. In hindsight, this would have been straightforward to fix once I understood the cause. In fact, I have made a version that implemented the original shader in Blender but discarded it after spending too long fixing some problems with the fBM noise! But at the time, with the fog of stress and rushing deadlines, it was much harder to see clearly. 
+
+In the second approach, the version shown here is already a much cleaner iteration compared to what I had during development. The earlier state was messy, and while I won’t show it here, it had a real impact on the workflow. Creating materials for every asset in the scene was already time-consuming, and since each one also needed variants for different emotions, the workload multiplied quickly. I could have written simple scripts to automate tint changes, but I did not, partly out of fatigue and partly out of laziness. 
+
+Furthermore, in the last scene screenshot, you can see that some materials are missing gradients. This happened because their parent object was set to *Static*, which caused Unity to treat the entire hierarchy as a single combined mesh. As a result, the generated coordinates were calculated across the whole object instead of per piece. The issue could have been avoided by setting each child object to *Static* individually rather than applying it to the parent. However, fixing it would have meant editing a large number of GameObjects in the hierarchy, which wasn’t feasible under the Gamescom deadline. So I left it as it was.
+
+All things considered, I believe we achieved the aesthetic we set out for. We received many positive feedbacks on the game’s visuals and on how effectively it conveyed emotions in a surreal way. Despite the flaws, I am satisfied with the work for this project. The next ones will only get better.
 
 ---
+
+## Credits
+
+I have written a long devlog about my work, but none of it would have been possible without my teammates. Each of them brought their own expertise and dedication to the project:
+
+- [**Felipe Lucas**](https://www.linkedin.com/in/felipe-wink-rodrigues-lucas-545b9637b): Team leader who ensured smooth communication within the group and kept the project on schedule.
+- [**Dawin Yurtseven**](https://www.linkedin.com/in/dawin-yurtseven-1b3097265): Programmer whose focus on delivering a fluid gameplay experience shaped the feel of the game. His dedication included countless late-night debugging sessions.
+- [**Alexandra Menshikova**](https://www.linkedin.com/in/alexandra-menshikova-a720242b9): Level designer who created the cozy, inviting opening levels that guided players into the world of *Forgotten Colors.*
+- [**Patrick Zimmerman**](https://www.linkedin.com/in/patrick-zimmermann-784589230): Level designer behind the intricate and visually striking design of the second level, adding depth and challenge to the experience.
+- [**Tamaki Richter**](https://www.linkedin.com/in/tamaki-richter-44ba4923a): Writer who developed the narrative framework and emotional core that the entire game revolves around.
+- [**Chris Kohler**](https://www.linkedin.com/in/chriskohlermusic): Composer who crafted the soundtrack, reinforcing the emotional atmosphere and immersing players in the game’s world.
+- [**Kirill Shcherbakov**](https://github.com/Corallicum): Programmer who supported development during the project.
+
+Thank you for taking the time to read this devlog. I hope you enjoyed reading it as much as I did writing it. See you in the next one!
+
