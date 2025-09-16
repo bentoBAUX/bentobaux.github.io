@@ -10,7 +10,7 @@ Here, I strive to explain complex topics the way I wish I had learned them: clea
 
 All of my tutorials and learning resources will remain free to everyone. Should you ever want to say thanks, [**buying me a boba**](https://www.patreon.com/posts/buy-me-boba-138976168?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link) is a sweet way to do it. It also helps keep the content flowing! 
 
-You can also find my **artworks, 3D renders, and past projects** on [ArtStation](https://www.artstation.com/bentobaux), and I showcase **shader demos, 3D animations, and level art timelapses** on [YouTube](https://www.youtube.com/@bentobaux).  
+You can also find my **artworks, 3D renders, and past projects** on [**ArtStation**](https://www.artstation.com/bentobaux), and I showcase **shader demos, 3D animations, and level art timelapses** on [**YouTube**](https://www.youtube.com/@bentobaux).  
 
 ---  
 <p align="center">
