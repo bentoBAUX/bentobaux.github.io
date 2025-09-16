@@ -4,9 +4,11 @@ icon: fas fa-info-circle
 order: 2
 ---
 ---
-**Hi! I’m Bennett Poh, a Computer Science student specialising in Games Engineering at the Technical University of Munich.** I have a deep passion for graphics programming and shader creation, and this site is where I document my projects and share my knowledge.  
+Hi! I’m Bennett Poh, a Computer Science student specialising in Games Engineering at the Technical University of Munich. This site is where I document my projects and share my knowledge and passion for computer graphics. 
 
-I strive to explain complex topics in a way that’s clear, intuitive, and engaging—the way I wish I had learned them. Having faced these challenges myself, I want to make graphics programming more approachable for others, helping them not just understand but truly enjoy exploring these concepts.  
+Here, I strive to explain complex topics the way I wish I had learned them: clear, intuitive, and engaging. Having faced these challenges myself, I aim to make graphics programming more approachable for others, helping them not just understand but truly enjoy exploring these concepts. 
+
+All of my tutorials and learning resources will remain free to everyone. Should you ever want to say thanks, [**buying me a boba**](https://www.patreon.com/posts/buy-me-boba-138976168?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link) is a sweet way to do it. It also helps keep the content flowing! 
 
 You can also find my **artworks, 3D renders, and past projects** on [ArtStation](https://www.artstation.com/bentobaux), and I showcase **shader demos, 3D animations, and level art timelapses** on [YouTube](https://www.youtube.com/@bentobaux).  
 
