@@ -126,16 +126,9 @@ Below is the key fragment section: the Voronoi feature points gently disturb the
         return half4(finalColour, 1.0);
     }
 ```
-<figcaption class="ba-caption">Full shader and support functions on <a href="https://github.com/bentoBAUX/Sumi-e-in-3D" target="_blank" rel="noopener"> <strong>GitHub</strong></a></figcaption>
+<figcaption class="ba-caption">Full shader and support functions on GitHub: <a href="https://github.com/bentoBAUX/Sumi-e-in-3D" target="_blank" rel="noopener"><strong>View source</strong></a>.</figcaption>
 
 It looked great in isolation, but it fell apart once placed in the actual scene. The method depended heavily on clean topology and UVs, yet most of the level geometry consisted of quick ProBuilder blockouts with awkward topology and unintuitive UV editing. Producing proper assets with retopology, UV packing, and consistent texel density was out of scope while we were also preparing for exams. As a result, the shader required per-object tweaking of every property, where every material relied on a fixed six-step colour ramp that became unmanageable at scene scale.
-
-{% include add-image-with-caption.html
-   src="/assets/img/forgotten-colors/old%20shader/old-shader-example.png"
-   alt="Sumi-e example"
-   caption="Early shader test with unsatisfactory results"
-   max_width="1920px"
-%}
 
 To achieve the painterly look I could not rely on surface normals, since on large flat faces they all point in the same direction and would have produced flat, uniform colours. This issue was especially pronounced because much of the scene was built from simple, flat shapes. Instead, I used **generated texture coordinates**, similar to Blender’s *Generated* output in their *Texture Coordinate* node, by remapping the object’s local position into the [0,1] range. 
 
@@ -207,7 +200,7 @@ half3 finalColour = lerp(_LightTint.rgb, _DarkTint.rgb * base, fac);
 
 return half4(finalColour, _Alpha);
 ```
-<figcaption class="ba-caption">Full shader and support functions on <a href="https://github.com/bentoBAUX/Sumi-e-in-3D" target="_blank" rel="noopener"> <strong>GitHub</strong></a></figcaption>
+<figcaption class="ba-caption">Full shader and support functions on GitHub: <a href="https://github.com/bentoBAUX/Sumi-e-in-3D" target="_blank" rel="noopener"><strong>View source</strong></a>.</figcaption>
 
 This approach is simple yet effective. To enhance the scene with a more painterly feel, I overlaid a paper texture. Here are the results:
 
