@@ -13,7 +13,7 @@ This project demonstrates Parallax Occlusion Mapping (POM) with self-shadowing i
 
 This page is designed to help solidify one's understanding of parallax mapping and explore the advancements that enhance realism while maintaining a relatively low computational cost.
 
-Full demo on YouTube [here](https://youtu.be/XEOFwgZYHSo)!
+Full demo on YouTube [**here**](https://youtu.be/XEOFwgZYHSo)!
 
 <!-- <p align="center">
     <a href="https://youtu.be/XEOFwgZYHSo"><img src="/assets/img/parallax/GIF.gif" alt="Example showcase GIF"/></a>
@@ -25,9 +25,10 @@ Full demo on YouTube [here](https://youtu.be/XEOFwgZYHSo)!
 
 ## Overview 
 
-Have you ever seen those mind-bending [optical illusion street art](https://d36tnp772eyphs.cloudfront.net/blogs/1/2019/06/Edgar-Mueller-street-mural-optical-illusion-of-ice-cliff.jpg) that turns a flat sidewalk into a deep dark abyss? From the right angle, it feels like you are standing on the edge of a cliff, staring into the gaping unknown. You might even ask a friend to hold the camera while you carefully step on the painted "debris" to strike a frightened pose for your Instagram. This is the concept behind parallax mapping - shifting textures to trick your eyes into seeing real depth.
+Have you ever seen those mind-bending [**optical illusion street art**](https://d36tnp772eyphs.cloudfront.net/blogs/1/2019/06/Edgar-Mueller-street-mural-optical-illusion-of-ice-cliff.jpg) that turns a flat sidewalk into a deep dark abyss? From the right angle, it feels like you are standing on the edge of a cliff, staring into the gaping unknown. You might even ask a friend to hold the camera while you carefully step on the painted "debris" to strike a frightened pose for your Instagram. 
 
-This is the concept behind parallax mapping — shifting textures to trick your eyes into perceiving real depth.
+This is the concept behind parallax mapping, shifting textures to trick your eyes into seeing real depth.
+
 
 ---
 
@@ -37,9 +38,9 @@ This is the concept behind parallax mapping — shifting textures to trick your 
 
 Before diving into this tutorial, let's talk about the setup for this little project and why it is important that we work in tangent space.
 
-Our height maps, normal maps, and UVs are defined in texture space, but light and view directions exist in world space. To make lighting interact correctly with texture-based surface detail, we transform those vectors into tangent space — a local space aligned with each fragment’s surface and UV layout.
+Our height maps, normal maps, and UVs are defined in texture space, but light and view directions exist in world space. To make lighting interact correctly with texture-based surface detail, we transform those vectors into tangent space, a local space aligned with each fragment’s surface and UV layout.
 
-Tangent space makes lighting calculations independent of the object’s rotation. Without it, the effect would look visually incorrect — shadows and highlights would stay fixed relative to world space instead of following the surface. Rotating the object would break the illusion, as lighting would no longer match the texture detail.
+Tangent space makes lighting calculations independent of the object’s rotation. Without it, the effect would look visually incorrect since shadows and highlights would stay fixed relative to world space instead of following the surface. Rotating the object would break the illusion, as lighting would no longer match the texture detail.
 
 #### Setting Up Tangent Space in HLSL
 
@@ -96,7 +97,7 @@ fixed4 frag(v2f i) : SV_Target
     // Lighting and parallax code...
 }
 ```
-This ensures that our lighting and shadowing calculations align perfectly with the texture data — no matter how the surface is oriented in the world.
+This ensures that our lighting and shadowing calculations align perfectly with the texture data no matter how the surface is oriented in the world.
 
 #### How to use the code here in my shader?
 
@@ -131,7 +132,7 @@ float parallaxShadows = SelfShadowing(_Depth, texCoords, l_TS, _NumberOfLayers, 
 return ambient + (diffuse + specular) * parallaxShadows;
 ```
 
-Don’t worry if you run into any setup issues. You can use the shaders I wrote for this tutorial: [Blinn-Phong](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Blinn-Phong.shader), [Cook-Torrance](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Cook-Torrance.shader), and the complete [Parallax Mapping](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Parallax-Mapping.hlsl) shader. You can also check out the full repository [here](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing).
+Don’t worry if you run into any setup issues. You can use the shaders I wrote for this tutorial: [**Blinn-Phong**](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Blinn-Phong.shader), [**Cook-Torrance**](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Cook-Torrance.shader), and the complete [**Parallax Mapping**](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Parallax-Mapping.hlsl) shader. You can also check out the full repository [**here**](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing).
 
 <details>
   <summary><strong>Shader Parameters – Blinn-Phong</strong></summary>
@@ -397,7 +398,7 @@ As you can see the results look decent when looking down at the surface. However
 
 This happens because our simple parallax mapping only shifts the texture coordinates without actually considering **how different parts of the surface should block or hide others**. In reality, when looking at a rough surface from an angle, some areas should be hidden behind taller parts, while others should be more exposed.
 
-To solve this, we need to look into a more robust approach — **Steep Parallax Mapping**.
+To solve this, we need to look into a more robust approach: **Steep Parallax Mapping**.
 
 ---
 ## Steep Parallax Mapping
@@ -505,7 +506,7 @@ We keep marching through the surface layer by layer until we go too deep. Here's
 
 1. **Check if we're still above the surface.** If our current layer depth is less than the depth from the depth map, it means the surface lies deeper than our current position — in other words, we haven’t reached it yet. So we continue stepping forward.
 
-2. **If we've gone too deep, we stop.** At this point, we return the last texture coordinates where we were still above the surface — this gives us the illusion of correct surface depth.
+2. **If we've gone too deep, we stop.** At this point, we return the last texture coordinates where we were still above the surface. This gives us the illusion of correct surface depth.
 
 3. **Otherwise, we keep stepping**:
    - Update `currentTexCoords` by taking the next one in the direction of the `stepVector`. 
@@ -541,14 +542,14 @@ Finally, here are the results of our new approach.
 
 This is a huge improvement over the basic version. However, even with a high layer count (256 in this example), you can still notice visible steps or banding between layers. The illusion breaks down slightly because we're still only returning the texture coordinates from the last step before we went too deep, without considering where the actual surface lies between the last two steps.
 
-And beyond visual quality, we also want to minimise the layer count for performance reasons — especially in real-time applications like games.
+And beyond visual quality, we also want to minimise the layer count for performance reasons especially in real-time applications like games.
 
 ---
 ## Parallax Occlusion Mapping
 
 To address both issues that we face in Steep Parallax Mapping, we can take a smarter approach: instead of just stopping at the last valid step, we can **interpolate between the two most recent samples** to more accurately estimate where the surface was intersected.
 
-This is the key idea behind **Parallax Occlusion Mapping** — a refinement of Steep Parallax Mapping that adds this extra step for improved precision and smoother results.
+This is the key idea behind **Parallax Occlusion Mapping**, a refinement of Steep Parallax Mapping that adds this extra step for improved precision and smoother results.
 
 The maths behind it is actually quite simple.
 
@@ -572,7 +573,7 @@ $$
 
 $$
 
-Since because ``surfaceOffsetBefore`` is always [negative](/assets/img/parallax/surfaceOffsetBeforeIsNegative.png), we must flip the positive sign to a negative.
+Since because ``surfaceOffsetBefore`` is always [**negative**](/assets/img/parallax/surfaceOffsetBeforeIsNegative.png), we must flip the positive sign to a negative.
 
 So we compute: 
 
@@ -630,11 +631,11 @@ And here are the results without the artefacts from before with the same layer c
 --- 
 ## Self-Shadowing
 
-We have achieved what we sought to achieve - a relatively low-cost approach in enhancing realism by faking depth on a flat surface. 
+We have achieved what we sought to achieve: a relatively low-cost approach in enhancing realism by faking depth on a flat surface. 
 
 Why don't we take it a step further?
 
-If you set up your scene with lights, you will notice that even with convincing surface detail, the illusion breaks down when lighting interacts with the surface. If light hits a deep groove or crack, we expect parts of it to be in shadow — yet everything looks uniformly lit and flat. 
+If you set up your scene with lights, you will notice that even with convincing surface detail, the illusion breaks down when lighting interacts with the surface. If light hits a deep groove or crack, we expect parts of it to be in shadow, yet everything looks uniformly lit and flat. 
 
 To make our illusion even more convincing, we need to simulate this interaction between light and surface detail. 
 
@@ -649,11 +650,11 @@ Before we can simulate self-shadowing, it’s important to understand how light 
 
 In tangent space, the surface is aligned like this:
 
-- $$+x$$  → tangent ($$u$$ direction)
+- $$+x$$: tangent ($$u$$ direction)
 
-- $$+y$$  → bitangent ($$v$$ direction)
+- $$+y$$: bitangent ($$v$$ direction)
 
-- $$+z$$  → surface normal, pointing outward
+- $$+z$$: surface normal, pointing outward
 
 So a light shining from in front of the surface will point toward $$−z$$ in tangent space. This is why the $$z$$ component of the light vector becomes so important for self-shadowing.
 
@@ -667,7 +668,7 @@ If `lightDir.z >= 0`, the light is behind the surface, and no surface detail sho
 if (lightDir.z >= 0.0) return 0.0;
 ```
 
-This keeps the shader efficient and ensures that shadow rays are only traced when the surface is lit from the front — where shadowing is visually meaningful.
+This keeps the shader efficient and ensures that shadow rays are only traced when the surface is lit from the front where shadowing is visually meaningful.
 
 #### Self-Shadowing Algorithm
 
@@ -677,8 +678,8 @@ First, we calculate the number of layers and the step size per layer:
 
 ```hlsl
 float layerDepth = 1.0 / numLayers;
-vec2 p = lightDir.xy / lightDir.z * depthScale;
-vec2 stepVector = p / numLayers;
+float2 p = lightDir.xy / lightDir.z * depthScale;
+float2 stepVector = p / numLayers;
 ```
 
 Here, `p` is the total projected UV offset in the direction of the light, scaled by `depthScale`. Dividing by `numLayers` gives us the UV step for each iteration.
@@ -686,7 +687,7 @@ Here, `p` is the total projected UV offset in the direction of the light, scaled
 We then begin ray marching from the current texture coordinates (calculated from Parallax Mapping) and initial depth:
 
 ```hlsl
-vec2 currentTexCoords = texCoords;
+float2 currentTexCoords = texCoords;
 float currentDepthMapValue = tex2D(depthMap, currentTexCoords).r;
 float currentLayerDepth = currentDepthMapValue;
 ```
@@ -703,7 +704,7 @@ int maxIterations = 32;
 int iterationCount = 0;
 ```
 
-Now we walk along the light direction, layer by layer — this time traversing upwards instead of downwards like we did before:
+Now we walk layer by layer along the light direction, this time traversing upwards instead of downwards like we did before:
 
 ```hlsl
 while (currentLayerDepth <= currentDepthMapValue + shadowBias && currentLayerDepth > 0.0 && iterationCount < maxIterations)
@@ -722,7 +723,7 @@ Finally, we determine if the light path is blocked:
 return currentLayerDepth > currentDepthMapValue ? 0.0 : 1.0;
 ```
 
-If the ray reaches a point where the value stored in the depth map at the current texture coordinate is below the current layer depth, it means something blocks the light — the fragment is in shadow (0.0). If the ray completes without hitting such a point, the fragment is fully lit (1.0).
+If the ray reaches a point where the value stored in the depth map at the current texture coordinate is below the current layer depth, it means something blocks the light, the fragment is in shadow (0.0). If the ray completes without hitting such a point, the fragment is fully lit (1.0).
 
 Here are the final results for this tutorial:
 
@@ -757,7 +758,7 @@ Thank you so much for reading, especially if you made it all the way to the end.
 
 Parallax mapping was one of the more confusing topics for me when I first started learning shaders. At first glance, it felt complex and maths-heavy, but once I understood the core idea, I realised it’s actually a very simple and elegant trick.
 
-I truly hope this post helped you see it the same way — and more importantly, helped you understand how and why it works. If you followed along and learned something new, that means a lot to me.
+I truly hope this post helped you see it the same way and more importantly, helped you understand how and why it works. If you followed along and learned something new, that means a lot to me.
 
 Feel free to use and modify the shaders provided. And if you build something cool with them, I’d love to see it!
 
