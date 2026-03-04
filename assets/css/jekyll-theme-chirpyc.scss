@@ -9,36 +9,36 @@
 
 /* append your custom style below */
 
-/* General Table Styling */
-.table-custom {
-  width: 100%;
-  border-collapse: collapse; /* Removes gaps between borders */
-  table-layout: fixed; /* Ensures equal column width */
-  border: 0;
-}
+// /* General Table Styling */
+// .table-custom {
+//   width: 100%;
+//   border-collapse: collapse; /* Removes gaps between borders */
+//   table-layout: fixed; /* Ensures equal column width */
+//   border: 0;
+// }
 
-/* Table Headers */
-.table-custom th {
-  background-color: #222; /* Darker background for contrast */
-  color: #fff; /* White text */
-  padding: 12px;
-  text-align: center;
-  font-weight: bold;
-  border: 1px solid #444;
-}
+// /* Table Headers */
+// .table-custom th {
+//   background-color: #222; /* Darker background for contrast */
+//   color: #fff; /* White text */
+//   padding: 12px;
+//   text-align: center;
+//   font-weight: bold;
+//   border: 1px solid #444;
+// }
 
-/* Table Cells */
-.table-custom td {
-  padding: 10px 15px; /* Adjust text padding */
-  border: 1px solid #444; /* Consistent border */
-  text-align: center;
-  vertical-align: middle;
-  color: #ddd; /* Light text color */
-}
+// /* Table Cells */
+// .table-custom td {
+//   padding: 10px 15px; /* Adjust text padding */
+//   border: 1px solid #444; /* Consistent border */
+//   text-align: center;
+//   vertical-align: middle;
+//   color: #ddd; /* Light text color */
+// }
 
-/* Images inside tables */
-.table-custom td img {
-  width: 100%; /* Ensures full width inside cells */
-  height: auto;
-  object-fit: contain;
-}
+// /* Images inside tables */
+// .table-custom td img {
+//   width: 100%; /* Ensures full width inside cells */
+//   height: auto;
+//   object-fit: contain;
+// }
