@@ -7,8 +7,6 @@ order: 2
 toc: true
 ---
 
----
-
 ## **Forgotten Colors**
 <div align="center">
   <img src="/assets/img/forgotten-colors/previews/preview.jpg" alt="Forgotten Colors" width="100%">
