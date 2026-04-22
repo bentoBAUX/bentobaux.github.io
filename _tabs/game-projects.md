@@ -1,11 +1,11 @@
 ---
 title: Game Projects
 layout: page
+hide_title: true
 permalink: /game-projects/
 icon: fas fa-gamepad
 order: 2
 toc: true
----
 ---
 ## **Forgotten Colors**
 <div align="center">

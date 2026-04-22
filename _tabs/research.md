@@ -5,9 +5,9 @@ permalink: /research/
 icon: fas fa-book
 order: 1
 toc: true
+hide_title: true
 ---
----
-## Real-Time Subsurface Scattering: A Comparative Analysis
+## **Real-Time Subsurface Scattering: A Comparative Analysis**
 
 <div align="center">
   <img src="/assets/research/realtime-subsurface-scattering/thumbnail.png" alt="Realtime SSS Thumbnail" width="100%">

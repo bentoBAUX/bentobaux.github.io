@@ -8,14 +8,14 @@
   icon: "fab fa-youtube"
   url: "https://www.youtube.com/@bentobaux"
 
-- type: linkedin
-  icon: "fab fa-linkedin"
-  url: "https://www.linkedin.com/in/bennettpoh/"
-
 - type: artstation
   icon: "fab fa-artstation"
   url: "https://www.artstation.com/bentobaux/albums/1728616"
 
+- type: linkedin
+  icon: "fab fa-linkedin"
+  url: "https://www.linkedin.com/in/bennettpoh/"
+  
 # - type: patreon
 #   icon: "fab fa-patreon"
 #   url: "https://www.patreon.com/bentobaux/"
