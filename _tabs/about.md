@@ -3,7 +3,8 @@ icon: fas fa-info-circle
 order: 3
 hide_title: true
 ---
-# **About**
+# **About** 
+---
 I am a computer science student specialising in computer graphics at the Technical University of Munich. This site documents my work in real-time rendering, shader development, and visual systems, alongside structured write-ups of the concepts behind them.
 
 Here, my focus is to explain complex topics the way I wish I had learned them: clear, intuitive, and engaging. Having faced these challenges myself, I aim to make graphics programming more approachable for others, helping them not just understand but truly enjoy exploring these concepts. 
