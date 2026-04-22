@@ -1,4 +1,5 @@
 ---
+title: Research
 layout: page
 permalink: /research/
 icon: fas fa-book

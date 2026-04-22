@@ -11,6 +11,8 @@ layout:
 tabs:
   # format: <filename_without_extension>: <value>
   home: Devlogs
+  research: Research
+  game-projects: Game Projects
   categories: Categories
   tags: Tags
   archives: Archives
