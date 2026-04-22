@@ -1,5 +1,5 @@
 ---
-title: "Game Projects"
+title: "Game"
 layout: page
 permalink: /game-projects/
 icon: fas fa-gamepad
