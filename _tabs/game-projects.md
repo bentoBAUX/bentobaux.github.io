@@ -1,12 +1,12 @@
 ---
-title: Game Projects
+title: "Game Projects"
 layout: page
 permalink: /game-projects/
 icon: fas fa-gamepad
 order: 2
 toc: true
 ---
-
+---
 ## **Forgotten Colors**
 <div align="center">
   <img src="/assets/img/forgotten-colors/previews/preview.jpg" alt="Forgotten Colors" width="100%">
