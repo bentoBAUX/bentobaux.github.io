@@ -12,7 +12,7 @@ tabs:
   # format: <filename_without_extension>: <value>
   home: Devlogs
   research: Research
-  game-projects: "Game Projects"
+  game-projects: Game
   categories: Categories
   tags: Tags
   archives: Archives
