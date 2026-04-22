@@ -1,7 +1,7 @@
 ---
 # the default layout is 'page'
 icon: fas fa-info-circle
-order: 2
+order: 3
 ---
 ---
 Hi! I’m Bennett Poh, a Computer Science student specialising in Games Engineering at the Technical University of Munich. This site is where I document my projects and share my knowledge and passion for computer graphics. 
