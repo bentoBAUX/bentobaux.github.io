@@ -19,6 +19,8 @@ The tool is functional, but I don’t consider it asset-ready yet. One significa
 
 The link to the GitHub repository can be found [here](https://github.com/bentoBAUX/Procedural-Terrain-with-Diamond-Square-in-Unity).
 
+---
+
 ## How does the algorithm work?
 
 ![Diagram](/assets/img/diamond-square/wikipedia.jpg)

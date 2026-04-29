@@ -17,8 +17,8 @@ Each lighting model is explained with its corresponding mathematical formulation
 in code. 
 
 You can find the [full repository](https://github.com/bentoBAUX/Basic-Lighting-Models-in-HLSL) on GitHub, along with a [demo video](https://youtu.be/PEVGSzxCQBc) showcasing the results.
-<br/>
-<br/>
+
+--- 
 
 ## Overview
 
