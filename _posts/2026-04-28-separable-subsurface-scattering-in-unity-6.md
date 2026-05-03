@@ -61,11 +61,11 @@ float4 frag(Varyings IN) : SV_Target0
 }
 
 ```
-Here, `LightLoop()` is the function that calculates the lighting. **// TODO: talk about surface data and input data**
+Here, `LightLoop()` calculates the lighting using two structs: `inputData` and `surfaceData`.
 
-This writes the final `float4` colour value into `SV_Target0` after all lighting calculations are complete. 
+`inputData` is mainly required by URP’s lighting system, especially the Forward+ light loop. `surfaceData` is our own shader data struct, used to store the material information needed by our lighting functions. There is some overlap between them, such as position, normal, and view direction. That is fine: `inputData` is for URP, while `surfaceData` is for our own lighting code.
 
-To split this up, we can define a custom fragment output `struct`. Each field is mapped to a different colour target.
+The shader currently writes the final `float4` colour value into `SV_Target0` after all lighting calculations are complete. To split this up, we can define a custom fragment output `struct` with each field mapped to a different colour target:
 
 ```hlsl
 // Define this before your fragment shader
@@ -76,7 +76,7 @@ struct FragOutput
   float4 ambientBuffer : SV_Target2;
 };
 ```
-We can then rewrite our fragment shader and `LightLoop()` to return a `FragOutput` instead of a `float4`.
+We can then rewrite our fragment shader and `LightLoop()` to return a `FragOutput` instead of a `float4`:
 
 ```hlsl
 FragOutput frag(Varyings IN)
@@ -86,6 +86,17 @@ FragOutput frag(Varyings IN)
   return o;
 }
 ```
+
+The same refactor also has to happen inside `LightLoop()`. For the full shader changes, compare [**`SSSS Master.shader`**](...) with [**`PBR Master.shader`**](...).
+
+#### 1.2 Creating the lighting buffers
+
+By using the `SV_Target[i]` semantics, we have only labelled where each output should be written.
+
+So far, only our diffuse output will render because `SV_Target0` is usually bound to the camera colour target in normal render passes. Since nothing stores the other specular and ambient lighting information, the other two colour targets won't be rendered.
+
+To fix this, we must create our own custom render pass that properly receives all three outputs as separate render textures.
+
 
 
 ---
