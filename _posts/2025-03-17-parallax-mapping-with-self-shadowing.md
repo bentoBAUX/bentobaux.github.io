@@ -134,9 +134,8 @@ return ambient + (diffuse + specular) * parallaxShadows;
 
 Don’t worry if you run into any setup issues. You can use the shaders I wrote for this tutorial: [**Blinn-Phong**](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Blinn-Phong.shader), [**Cook-Torrance**](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Cook-Torrance.shader), and the complete [**Parallax Mapping**](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing/blob/master/Assets/Shaders/Parallax-Mapping.hlsl) shader. You can also check out the full repository [**here**](https://github.com/bentoBAUX/Parallax-Mapping-with-Self-Shadowing).
 
-<details>
-  <summary><strong>Shader Parameters – Blinn-Phong</strong></summary>
-  <br>
+<details class="collapsible">
+  <summary class="collapsible-label"><strong>Shader Parameters – Blinn-Phong</strong></summary>
   <table>
     <thead>
       <tr>
@@ -211,9 +210,8 @@ Don’t worry if you run into any setup issues. You can use the shaders I wrote 
 </details>
 
 
-<details>
-  <summary><strong>Shader Parameters – Cook-Torrance</strong></summary>
-  <br>
+<details class="collapsible">
+  <summary class="collapsible-label"><strong>Shader Parameters – Cook-Torrance</strong></summary>
   <table>
     <thead>
       <tr>
@@ -369,9 +367,8 @@ Here is a visualisation of the approach that I have prepared to ease your unders
 
 Below are the results of this implementation in two different lighting models, **Blinn-Phong** and **Cook-Torrance + Oren-Nayar**. 
 
-<details markdown="1">
-  <summary>Expand to view the images</summary>
-
+<details class="collapsible" markdown="1">
+  <summary class="collapsible-label">Expand to view the images</summary>
   <table class="table-custom">
   <thead>
     <tr>
@@ -392,8 +389,6 @@ Below are the results of this implementation in two different lighting models, *
 </table>
 </details>
 
-
-<br>
 As you can see the results look decent when looking down at the surface. However, as you might have expected, this basic computation does not come without its drawbacks. When looking at an angle, the algorithm fails to uphold a realistic parallax shift, creating this rather distorted and warped effect on the plane. 
 
 This happens because our simple parallax mapping only shifts the texture coordinates without actually considering **how different parts of the surface should block or hide others**. In reality, when looking at a rough surface from an angle, some areas should be hidden behind taller parts, while others should be more exposed.
@@ -515,9 +510,9 @@ We keep marching through the surface layer by layer until we go too deep. Here's
   
 Finally, here are the results of our new approach.
 
-<details markdown="1">
-  <summary>Expand to view the images</summary>
 
+<details class="collapsible" markdown="1">
+  <summary class="collapsible-label">Expand to view the images</summary>
   <table class="table-custom">
   <thead>
     <tr>
@@ -538,7 +533,6 @@ Finally, here are the results of our new approach.
 </table>
 </details>
 
-<br>
 
 This is a huge improvement over the basic version. However, even with a high layer count (256 in this example), you can still notice visible steps or banding between layers. The illusion breaks down slightly because we're still only returning the texture coordinates from the last step before we went too deep, without considering where the actual surface lies between the last two steps.
 
@@ -604,9 +598,8 @@ return finalTexCoords;
 
 And here are the results without the artefacts from before with the same layer count:
 
-<details markdown="1">
-  <summary>Expand to view the images</summary>
-
+<details class="collapsible" markdown="1">
+  <summary class="collapsible-label">Expand to view the images</summary>
   <table class="table-custom">
   <thead>
     <tr>
@@ -727,9 +720,8 @@ If the ray reaches a point where the value stored in the depth map at the curren
 
 Here are the final results for this tutorial:
 
-<details markdown="1">
-  <summary>Expand to view the images</summary>
-
+<details class="collapsible" markdown="1">
+  <summary class="collapsible-label">Expand to view the images</summary>
   <table class="table-custom">
   <thead>
     <tr>
@@ -749,8 +741,7 @@ Here are the final results for this tutorial:
   </tbody>
 </table>
 
-</details>
----
+</details>  
 
 ## Afterword
 
