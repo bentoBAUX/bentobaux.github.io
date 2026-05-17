@@ -46,7 +46,11 @@ In HLSL, this is done through the [**`SV_Target`**](https://learn.microsoft.com/
 
 For multiple render targets, we simply write to more outputs: `SV_Target1`, `SV_Target2`, and so on. Unity supports up to 8 colour targets in total, from `SV_Target0` to `SV_Target7`. In this implementation, we only need the first three for each of the lighting components.
 
-Using [**this**]() PBR shader as a starting point, we can refactor the fragment output so each lighting component is written to its own colour target.
+Using [**this**]() PBR shader as a starting point, we can refactor the fragment output so each lighting component is written to its own colour target. 
+
+
+>Since this shader supports multiple lighting models, each with its own settings, I use a custom `ShaderGUI` to keep the material inspector clean and only show the controls relevant to the selected model. The script for this can be found [**here**]().
+{:.prompt-info}
 
 #### 1.1 Refactoring the fragment output
 
@@ -115,7 +119,7 @@ The `ScriptableRenderFeature` itself is mostly boilerplate. It simply creates ou
 <details class="collapsible" markdown="1">
 <summary>
   <span class="collapsible-label">Show:</span>
-  <span class="collapsible-meta"><a href=""><code>SSSSRenderFeature.cs</code></a></span>
+  <span class="collapsible-meta"><code>SSSSRenderFeature.cs</code></span>
 </summary>
 
 ```csharp
@@ -180,7 +184,7 @@ A line-by-line walkthrough would make this devlog too long, so I’ve included t
 <details class="collapsible" markdown="1">
 <summary>
   <span class="collapsible-label">Show:</span>
-  <span class="collapsible-meta"><a href=""><code>SSSSRenderPass.cs</code></a></span>
+  <span class="collapsible-meta"><code>SSSSRenderPass.cs</code></span>
 </summary>
 
 ```csharp
@@ -446,6 +450,7 @@ public class SSSSRenderPass : ScriptableRenderPass
 ```
 </details>
 
+*Show diffuse, ambient and specular parts*
 ---
 ## 2. Blur the diffuse lighting
 
@@ -542,7 +547,7 @@ With that in mind, the shader code becomes a direct translation of the concepts 
 <details class="collapsible" markdown="1">
 <summary>
   <span class="collapsible-label">Show:</span>
-  <span class="collapsible-meta"><a href=""><code>ArtistFriendlyKernel.shader</code></a></span>
+  <span class="collapsible-meta"><code>ArtistFriendlyKernel.shader</code></span>
 </summary>
 
 ```hlsl
@@ -649,7 +654,197 @@ Shader "bentoBAUX/FX/ArtistFriendlyKernel"
 ```
 </details>
 
-In Unity, this shader is used through a material. We assign that material in the render feature settings, and the RenderGraph pass later uses it for the horizontal and vertical SSS blur passes.
+In Unity, this shader is used through a material. We assign that material in the render feature settings, and the RenderGraph pass later uses it for the horizontal and vertical SSS blur passes in sections 3a and 3b in `SSSSRenderPass.cs`.
+
+*Show intermediate result*
 
 ---
 ## 3. Combine everything
+
+Now that we have finished adding subsurface scattering to our diffuse lighting, we need to put everything back together. According to our setup in section 4 of `SSSSRenderPass.cs`, we should now have five textures:
+
+- `_SceneTex`: The current camera colour texture before the final SSS composite. This is used as a based image so that non-SSS objects remain untouched.
+- `_DiffuseTex`: The unprocessed diffuse lighting of SSS objects.
+- `_ProcessedDiffuseTex`: The diffuse lighting after two SSS blur passes.
+- `_SpecularTex`: The specular lighting of SSS objects.  
+- `_AmbientTex`: The ambient or indirect lighting of the SSS objects. This and `_SpecularTex` were kept separate so they do not get blurred.
+
+Putting these together is simply computing their sum. However, because our diffuse texture was originally rendered to `SV_Target0` which is the colour output that ends up in the scene colour, `_SceneTex` already includes the diffuse texture. As a result, `_DiffuseTex` does not need to be included in the sum.
+
+Another caveat to consider is **masking**. Since `_ProcessedDiffuseTex` is created by blurring the diffuse lighting in screen space, the blur does not automatically know where the SSS object ends. Without a mask, the processed diffuse contribution can bleed past the surface silhouette and appear as a glowing outline around the model.
+
+*Include a picture of no mask*
+
+To prevent this, we create a simple mask from `_DiffuseTex`. The idea is straightforward: pixels belonging to the SSS object have diffuse lighting, while unrelated scene pixels are usually black in this buffer.
+
+First, we take the brightest colour channel of the diffuse buffer:
+
+$$
+m_\text{source} = \max(D_r, D_g, D_b)
+$$
+
+Then we convert this value into a soft mask using `smoothstep`:
+
+$$
+m = \operatorname{smoothstep}(a, b, m_\text{source})
+$$
+
+Here, $$a$$ is the lower threshold and $$b$$ is the upper threshold of the mask transition. Values below $$a$$ are treated as outside the SSS object and become $$0$$. Values above $$b$$ are treated as part of the SSS object and become $$1$$. Values between $$a$$ and $$b$$ are smoothly interpolated, giving us a soft boundary instead of a harsh binary edge.
+
+In my case, I found that $$a = 0.01$$ and $$b = 0.1$$ worked well. This means that very dark diffuse values are ignored, while pixels with a stronger diffuse contribution are fully included in the SSS mask.
+
+With this mask, we can now recombine everything:
+
+$$
+C_\text{final} = C_\text{scene} + C_\text{ambient} + C_\text{specular} + m \cdot C_\text{processed}
+$$
+
+> Do we subtract diffuse from the scene texture first?
+> {: .title}
+> One might think that the correct approach is to subtract `_DiffuseTex` from `_SceneTex` before adding `_ProcessedDiffuseTex`. However, in this implementation, that removes too much of the original high-frequency diffuse detail, such as local shading, texture variation, and small surface features. Since `_ProcessedDiffuseTex` is heavily blurred, using it as a full replacement makes the material look waxy and unnatural.
+>
+> Instead, I keep the original scene colour and overlay the processed diffuse contribution on top. This is not a perfectly physical composition, but it gives a more stable and visually convincing result for this screen-space implementation.
+{: .box-info}
+
+There is one last RenderGraph detail. We cannot safely read from the `resourceData.activeColorTexture` and write back into that same texture in the same pass. The composite pass therefore writes into a temporary output texture first. After that, we run a small copy pass that copies this temporary result back into the active scene colour texture.
+
+Below is the final code for the compositor:
+
+<details class="collapsible" markdown="1">
+<summary>
+  <span class="collapsible-label">Show:</span>
+  <span class="collapsible-meta"><code>Compositor.shader</code></span>
+</summary>
+
+```hlsl
+Shader "bentoBAUX/Util/Compositor"
+{
+    HLSLINCLUDE
+    #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+    #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+
+    TEXTURE2D(_SceneTex);
+    SAMPLER(sampler_SceneTex);
+
+    TEXTURE2D(_DiffuseTex);
+    SAMPLER(sampler_DiffuseTex);
+
+    TEXTURE2D(_ProcessedDiffuseTex);
+    SAMPLER(sampler_ProcessedDiffuseTex);
+
+    TEXTURE2D(_SpecularTex);
+    SAMPLER(sampler_SpecularTex);
+
+    TEXTURE2D(_AmbientTex);
+    SAMPLER(sampler_AmbientTex);
+
+    float4 CompositeFrag(Varyings input) : SV_Target
+    {
+        float2 uv = input.texcoord;
+
+        float3 sceneColour = SAMPLE_TEXTURE2D(_SceneTex, sampler_SceneTex, uv).rgb;
+        float3 diffuse = SAMPLE_TEXTURE2D(_DiffuseTex, sampler_DiffuseTex, uv).rgb;
+        float3 processed = SAMPLE_TEXTURE2D(_ProcessedDiffuseTex, sampler_ProcessedDiffuseTex, uv).rgb;
+        float3 specular = SAMPLE_TEXTURE2D(_SpecularTex, sampler_SpecularTex, uv).rgb;
+        float3 ambient = SAMPLE_TEXTURE2D(_AmbientTex, sampler_AmbientTex, uv).rgb;
+
+        // Mask out the irrelevant scene objects
+        float maskSource = max(diffuse.r, max(diffuse.g, diffuse.b));
+        float mask = smoothstep(0.01, 0.1, maskSource);
+        float3 maskTex = (float3)mask; // Debugging purposes
+
+        float3 finalColour = sceneColour + ambient + specular + mask * processed;
+
+        return float4(finalColour, 1.0);
+    }
+
+    float4 CopyFrag(Varyings input) : SV_Target
+    {
+        return SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.texcoord);
+    }
+    ENDHLSL
+
+    SubShader
+    {
+        Tags
+        {
+            "RenderPipeline"="UniversalPipeline"
+        }
+
+        ZWrite Off
+        ZTest Always
+        Cull Off
+
+        // Material pass 0 is our compositor.
+        Pass
+        {
+            Name "Composite"
+
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment CompositeFrag
+            ENDHLSL
+        }
+
+        // Material pass 1 copies the output from the compositor into the active screen texture.
+        Pass
+        {
+            Name "Copy"
+
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment CopyFrag
+            ENDHLSL
+        }
+    }
+}
+```
+</details>
+
+## Final result and backlighting limitation
+
+At this point, the screen-space SSS pipeline is working: we split the lighting, blur the diffuse component, and composite everything back into the scene.
+
+However, this only handles light scattering across the visible surface. It **does not automatically create the strong translucent backlighting effect** you often see around ears, fingers, or thin skin regions. That kind of effect depends on light travelling through the object, which our screen-space blur does not know about.
+
+To approximate this, I added a simple backlighting term directly in `SSSS Master.shader`, based on Jorge Jimenez’s translucency approximation from his [**website**](https://www.iryoku.com/translucency/?utm_source=openai). The output of `CalculateTransmittance()` should be added as an extra term in the master shader. In my implementation, I add it together with the ambient contribution that will be written to `_AmbientTex`.
+
+<details class="collapsible" markdown="1">
+<summary>
+  <span class="collapsible-label">Show:</span>
+  <span class="collapsible-meta"><code>SSSSTransmission.shader</code></span>
+</summary>
+
+```hlsl
+#ifndef SSSSTRANSMISSION_INCLUDED
+#define SSSSTRANSMISSION_INCLUDED
+
+// Code from: https://www.iryoku.com/translucency/?utm_source=openai
+float3 T(float s)
+{
+    return float3(0.233, 0.455, 0.649) * exp(-s * s / 0.0064) +
+        float3(0.1, 0.336, 0.344) * exp(-s * s / 0.0484) +
+        float3(0.118, 0.198, 0.0) * exp(-s * s / 0.187) +
+        float3(0.113, 0.007, 0.007) * exp(-s * s / 0.567) +
+        float3(0.358, 0.004, 0.0) * exp(-s * s / 1.99) +
+        float3(0.078, 0.0, 0.0) * exp(-s * s / 7.41);
+}
+
+float3 CalculateTransmittance(Surf surfaceData, Light lightData)
+{
+    float3 N = normalize(surfaceData.normalWS);
+    float3 L = normalize(lightData.direction);
+
+    float irradiance = max(0.3 + dot(-N, L), 0.0);
+    float lightAtten = lightData.distanceAttenuation * lightData.shadowAttenuation;
+
+    float s = surfaceData.thickness;
+
+    float3 transmittance = T(s) * lightData.color * lightAtten * surfaceData.baseColor.rgb * irradiance;
+
+    return transmittance;
+}
+#endif
+
+```
+</details>
