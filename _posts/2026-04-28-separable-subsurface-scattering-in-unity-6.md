@@ -111,10 +111,9 @@ To fix this, we must create our own custom render pass that properly receives al
 
 #### 1.3 Setting up the render feature
 
-In our case, we want a render feature that tells URP to insert our custom lighting-buffer pipeline into the renderer. This pipeline captures the diffuse, specular, and ambient lighting buffers, processes the diffuse buffer for subsurface scattering, and then combines everything back into the final image.
+In our case, we want a render feature that tells URP to insert our custom lighting pipeline into the renderer. This pipeline captures the diffuse, specular, and ambient lighting buffers, processes the diffuse buffer for subsurface scattering, and then combines everything back into the final image. It is also here where we allow the user to customise the settings for how the subsurface scattering should look.
 
-The `ScriptableRenderFeature` itself is mostly boilerplate. It simply creates our custom render pass and inserts it into URP. For the basic steps of adding a render feature to URP, see [this](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@16.0/manual/urp-renderer-feature-how-to-add.html). 
-
+This is mostly boilerplate. It simply creates our custom render pass, gives it our settings, and inserts it into URP. For the basic steps of adding a render feature to URP, see [**this**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@16.0/manual/urp-renderer-feature-how-to-add.html). 
 
 <details class="collapsible" markdown="1">
 <summary>
@@ -126,32 +125,91 @@ The `ScriptableRenderFeature` itself is mostly boilerplate. It simply creates ou
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
+[System.Serializable]
+public class SSSSSettings
+{
+    [Header("Scattering")]
+
+    // Blends between the original diffuse lighting and the blurred SSS result.
+    // 0 = no visible subsurface scattering, 1 = full subsurface scattering.
+    [Range(0.0f, 1.0f)]
+    public float subsurfaceWeight = 1f;
+
+    // Global multiplier for the scattering radius.
+    // Higher values make light spread further across the surface.
+    [Range(0.0f, 10.0f)]
+    public float scatterScale = 2.0f;
+
+    // Controls the blend between the far and near scattering profiles.
+    // 0 = mostly far/wide scattering, 1 = mostly near/tight scattering.
+    [Range(0.0f, 1.0f)]
+    public float nearFarBalance = 0.5f;
+
+    // RGB standard deviations for the near scattering Gaussian.
+    // Smaller values preserve sharper details and keep scattering close to the source pixel.
+    public Vector4 nearSigma = new Vector4(0.35f, 0.07f, 0.035f, 1.0f);
+
+    // RGB standard deviations for the far scattering Gaussian.
+    // Larger values create wider colour bleeding and softer diffusion.
+    public Vector4 farSigma = new Vector4(1.00f, 0.12f, 0.10f, 1.0f);
+
+    // Number of samples used by the blur kernel.
+    // Hidden because this is currently fixed internally rather than exposed as an artist setting.
+    [HideInInspector]
+    public int stepCount = 32;
+}
+
 public class SSSSRenderFeature : ScriptableRendererFeature
 {
     [SerializeField] private Material SSSSMaterial;
     [SerializeField] private Material compositeMaterial;
+    [SerializeField] private SSSSSettings settings = new SSSSSettings();
 
     private SSSSRenderPass renderPass;
 
     public override void Create()
     {
-        renderPass = new SSSSRenderPass(SSSSMaterial, compositeMaterial);
+        // Create the render pass once when the feature is initialised.
+        renderPass = new SSSSRenderPass(SSSSMaterial, compositeMaterial, settings);
+
+        // Run the SSSS pass after opaque objects have been rendered.
         renderPass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        if (renderPass == null)
+        // Do not enqueue the pass if the SSS blur material is missing.
+        if (SSSSMaterial == null)
         {
-            Debug.LogError("SSSSRenderFeature: RenderPass was not created.");
+            Debug.LogError("SSSSRenderFeature: SSSS material is null.");
             return;
         }
 
+        // Do not enqueue the pass if the final composite material is missing.
+        if (compositeMaterial == null)
+        {
+            Debug.LogError("SSSSRenderFeature: Composite material is null.");
+            return;
+        }
+
+        // Recreate the pass if Unity has lost or reset the cached instance.
+        if (renderPass == null)
+        {
+            renderPass = new SSSSRenderPass(SSSSMaterial, compositeMaterial, settings);
+            renderPass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
+        }
+
+        // We will create these setters in the next step in SSSSRenderPass.
+        renderPass.SetMaterials(SSSSMaterial, compositeMaterial);
+        renderPass.SetSettings(settings);
+
+        // Add the pass to the renderer for this frame.
         renderer.EnqueuePass(renderPass);
     }
 
     protected override void Dispose(bool disposing)
     {
+        // Release any temporary render targets or pass-owned resources.
         if (disposing && renderPass != null)
             renderPass.Dispose();
     }
@@ -169,15 +227,16 @@ In Unity 6, the `ScriptableRenderPass` workflow has changed slightly. In older U
 
 With RenderGraph, we instead describe the pass through `RecordRenderGraph()`. Each pass declares which textures it reads from and writes to, allowing Unity to manage resource lifetimes, pass ordering, and optimisation more safely.
 
-For our SSS pipeline, the render pass has **five main parts**:
+For our SSS pipeline, the render pass has **six main parts**:
 
-1. Create temporary lighting buffers.
-2. Render the SSS objects into separate diffuse, specular, and ambient textures.
-3. Blur the diffuse texture.
+1. Apply our settings to the shaders.
+2. Create temporary lighting buffers.
+3. Render the SSS objects into separate diffuse, specular, and ambient textures.
+4. Blur the diffuse texture.
    1. Blur the diffuse texture horizontally.
    2. Blur the result vertically.
-4. Composite the blurred diffuse lighting with the other lighting components.
-5. Blitt the final texture into the scene texture.
+5. Composite the blurred diffuse lighting with the other lighting components.
+6. Blitt the final texture into the scene texture.
 
 A line-by-line walkthrough would make this devlog too long, so I’ve included the script below with the key sections commented for clarity.
 
@@ -195,8 +254,18 @@ using UnityEngine.Rendering.Universal;
 
 public class SSSSRenderPass : ScriptableRenderPass
 {
-    private readonly Material compositeMaterial;
-    private readonly Material SSSSMaterial;
+    private Material compositeMaterial;
+    private Material SSSSMaterial;
+    private SSSSSettings settings;
+
+    // Shared global SSSS properties.
+    // These are read by ArtistFriendlyKernel.shader, Compositor.shader and SSSSTransmission.hlsl.
+    private static readonly int GlobalSubsurfaceWeight = Shader.PropertyToID("_SSSS_SubsurfaceWeight");
+    private static readonly int GlobalNearFarBalanceID = Shader.PropertyToID("_SSSS_NearFarBalance");
+    private static readonly int GlobalScatterScaleID = Shader.PropertyToID("_SSSS_ScatterScale");
+    private static readonly int GlobalNearSigmaID = Shader.PropertyToID("_SSSS_NearSigma");
+    private static readonly int GlobalFarSigmaID = Shader.PropertyToID("_SSSS_FarSigma");
+    private static readonly int GlobalStepCountID = Shader.PropertyToID("_SSSS_StepCount");
 
     // Stores MRT textures so the later composite pass can read them in the same frame.
     private class SSSSFrameData : ContextItem
@@ -245,32 +314,45 @@ public class SSSSRenderPass : ScriptableRenderPass
         public Material blitMaterial;
     }
 
-    public SSSSRenderPass(Material SSSSMaterial, Material compositeMaterial)
+    private void ApplyGlobalSettings()
+    {
+        Shader.SetGlobalFloat(GlobalSubsurfaceWeight, settings.subsurfaceWeight);
+        Shader.SetGlobalFloat(GlobalNearFarBalanceID, settings.nearFarBalance);
+        Shader.SetGlobalVector(GlobalNearSigmaID, settings.nearSigma);
+        Shader.SetGlobalVector(GlobalFarSigmaID, settings.farSigma);
+        Shader.SetGlobalFloat(GlobalScatterScaleID, settings.scatterScale);
+        Shader.SetGlobalInt(GlobalStepCountID, settings.stepCount);
+    }
+
+    public SSSSRenderPass(Material SSSSMaterial, Material compositeMaterial, SSSSSettings settings)
     {
         this.SSSSMaterial = SSSSMaterial;
         this.compositeMaterial = compositeMaterial;
+        this.settings = settings;
+    }
+
+    public void SetMaterials(Material ssssMaterial, Material compositeMaterial)
+    {
+        this.SSSSMaterial = ssssMaterial;
+        this.compositeMaterial = compositeMaterial;
+    }
+
+    public void SetSettings(SSSSSettings settings)
+    {
+        this.settings = settings;
     }
 
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
     {
-        if (compositeMaterial == null)
-        {
-            Debug.LogError("compositeMaterial is null");
-            return;
-        }
-
-        if (SSSSMaterial == null)
-        {
-            Debug.LogError("SSSSMaterial is null");
-            return;
-        }
+        // 1) Apply global settings to ArtistFriendlyKernel.shader, SSSSTransmission.hlsl and Compositor.shader
+        ApplyGlobalSettings();
 
         UniversalRenderingData renderingData = frameData.Get<UniversalRenderingData>();
         UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
         UniversalLightData lightData = frameData.Get<UniversalLightData>();
         UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
 
-        // 1) Setup: Create MRT textures matching the camera target.
+        // 2) Setup: Create MRT textures matching the camera target.
         RenderTextureDescriptor desc = cameraData.cameraTargetDescriptor;
         desc.depthBufferBits = 0;
         desc.msaaSamples = 1;
@@ -289,7 +371,7 @@ public class SSSSRenderPass : ScriptableRenderPass
         customData.specularTexture = specularTexture;
         customData.ambientTexture = ambientTexture;
 
-        // 2) MRT pass: attach ambient, diffuse, specular into separate render textures for SSS processing
+        // 3) MRT pass: attach ambient, diffuse, specular into separate render textures for SSS processing
         using (var builder = renderGraph.AddRasterRenderPass<MRTPassData>("SSSS MRT Pass", out var passData))
         {
             ShaderTagId shaderTag = new ShaderTagId("UniversalForward");
@@ -338,7 +420,7 @@ public class SSSSRenderPass : ScriptableRenderPass
             });
         }
 
-        // 3a) SSS horizontal pass: Apply horizontal SSS pass onto diffuse texture and output it to horizontalTempTexture.
+        // 4a) SSS horizontal pass: Apply horizontal SSS pass onto diffuse texture and output it to horizontalTempTexture.
         using (var builder = renderGraph.AddRasterRenderPass<SSSSPassData>("SSSS SSS Horizontal Pass", out var passData))
         {
             // Setup the data needed when the pass executes.
@@ -359,7 +441,7 @@ public class SSSSRenderPass : ScriptableRenderPass
             });
         }
 
-        // 3b) SSS vertical pass: Apply vertical SSS pass onto 3a's texture and output it to processedDiffuseTexture.
+        // 4b) SSS vertical pass: Apply vertical SSS pass onto 3a's texture and output it to processedDiffuseTexture.
         using (var builder = renderGraph.AddRasterRenderPass<SSSSPassData>("SSSS SSS Vertical Pass", out var passData))
         {
             passData.inputTexture = horizontalTempTexture;
@@ -376,7 +458,7 @@ public class SSSSRenderPass : ScriptableRenderPass
             });
         }
 
-        // 4) Composite pass: Combine processedDiffuseTexture with specularTexture and apply the masked result into compositeOutputTexture
+        // 5) Composite pass: Combine processedDiffuseTexture with specularTexture and apply the masked result into compositeOutputTexture
         using (var builder = renderGraph.AddRasterRenderPass<CompositePassData>("SSSS Composite Pass", out var passData))
         {
             // Retrieve the textures created earlier in this frame.
@@ -415,7 +497,7 @@ public class SSSSRenderPass : ScriptableRenderPass
             });
         }
 
-        // 5) Final pass: Blit compositeOutputTexture into resourceData.activeColorTexture
+        // 6) Final pass: Blit compositeOutputTexture into resourceData.activeColorTexture
         // We cannot sample activeColorTexture and write back into it in the same composite pass.
         // Therefore, we write the composite pass to compositeOutputTexture in 4) first,
         // then use this pass to copy that result back into activeColorTexture.
@@ -451,6 +533,7 @@ public class SSSSRenderPass : ScriptableRenderPass
 </details>
 
 *Show diffuse, ambient and specular parts*
+
 ---
 ## 2. Blur the diffuse lighting
 
@@ -473,13 +556,33 @@ G(r,\sigma)
 e^{-\frac{r^2}{2\sigma^2}}
 $$
 
-The artist-friendly kernel is then written as:
+To keep the profile artist-controllable, I scale both Gaussian widths by a global scattering radius:
 
 $$
-a_m(r) = wG(r,\sigma_\text{near}) + (1-w)G(r,\sigma_\text{far})
+\sigma'_\text{near}
+=
+\sigma_\text{near}
+\cdot s
 $$
 
-Here, $$w$$ controls the balance between short-range and long-range scattering, while $$\sigma_\text{near}$$ and $$\sigma_\text{far}$$ control the width of the near and far Gaussians respectively.
+$$
+\sigma'_\text{far}
+=
+\sigma_\text{far}
+\cdot s
+$$
+
+where $$s = \text{_SSSS_ScatterScale}$$. The kernel then becomes:
+
+$$
+a_m(r)
+=
+wG(r,\sigma'_\text{near})
++
+(1-w)G(r,\sigma'_\text{far})
+$$
+
+Here, $$w$$ controls the balance between short-range and long-range scattering, while $$\sigma'_\text{near}$$ and $$\sigma'_\text{far}$$ control the width of the near and far Gaussians respectively. 
 
 The full separable 2D kernel is simply:
 
@@ -518,7 +621,7 @@ a_m(|i|)
 }
 $$
 
-Here, $$N$$ is the number of steps on each side of the current pixel, $$\Delta u$$ is the spacing between samples, and $$a_m(\lvert i \rvert)$$ is the kernel weight for the $$i$$-th sample.
+Here, $$N$$ is the number of steps on each side of the current pixel, $$\Delta u$$ is the spacing between samples, and $$a_m(\lvert i \rvert)$$ is the kernel weight for the $$i$$-th sample. The final colour of the pixel $$u$$ is written as $$C_\text{out}(u)$$.
 
 We use $$\lvert i \rvert$$ because the kernel only depends on distance from the centre, not whether the sample is to the left, right, above, or below the current pixel. In our case, we only sample along one axis at a time. For the horizontal pass, the samples move left and right. For the vertical pass, the samples move up and down.
 
@@ -529,7 +632,7 @@ To avoid rewriting the same logic for the horizontal and vertical passes, we onl
 $$
 \Delta uv
 =
-\text{direction} \cdot \text{texelSize} \cdot \_BlurScale
+\text{direction} \cdot \text{texelSize}
 $$
 
 So the $$i$$-th sample position becomes:
@@ -553,26 +656,15 @@ With that in mind, the shader code becomes a direct translation of the concepts 
 ```hlsl
 Shader "bentoBAUX/FX/ArtistFriendlyKernel"
 {
-    Properties
-    {
-        _ScatterWeights("Scatter Weights (RGB)", Vector) = (1., 0.1, 0.1)
-        _NearFarBalance("Near/Far Balance", Range(0,1)) = 0.5
-        _SigmaNear("Near Sigma", Vector) = (3.5,1.5,0.8)
-        _SigmaFar("Far Sigma", Vector) = (6.0, 3.0, 1.2)
-        _BlurScale("Blur Scale", Float) = 1.0
-        _StepCount("Step Count", Float) = 6
-    }
-
     HLSLINCLUDE
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
     #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
-    float3 _ScatterWeights;
-    float _NearFarBalance;
-    float3 _SigmaNear;
-    float3 _SigmaFar;
-    float _BlurScale;
-    float _StepCount;
+    float _SSSS_NearFarBalance;
+    float3 _SSSS_NearSigma;
+    float3 _SSSS_FarSigma;
+    float _SSSS_ScatterScale;
+    int _SSSS_StepCount;
 
     SAMPLER(sampler_BlitTexture);
 
@@ -585,39 +677,43 @@ Shader "bentoBAUX/FX/ArtistFriendlyKernel"
     float4 Convolve(float2 uv, float2 direction)
     {
         float2 texelSize = 1.0 / _ScreenParams.xy;
-
         float3 sum = 0.0;
-        float totalweight = 0.;
+        float3 totalWeight = 0.;
+        float balance = saturate(_SSSS_NearFarBalance);
 
-        for (int i = -_StepCount; i <= _StepCount; i++)
+        float spreadMultiplier = 2; // I have added a spread multiplier for aesthetics reasons.
+        float scatterRadius = max(_SSSS_ScatterScale * spreadMultiplier, 0.01);
+        float3 nearSigma = max(_SSSS_NearSigma.rgb * scatterRadius, 0.01);
+        float3 farSigma = max(_SSSS_FarSigma.rgb * scatterRadius, 0.01);
+
+        for (int i = -_SSSS_StepCount; i <= _SSSS_StepCount; i++)
         {
             float offset = abs((float)i);
-            float2 sampleUV = clamp(uv + direction * texelSize * i * _BlurScale, 0., 1.);
+            float2 sampleUV = clamp(uv + direction * texelSize * i, 0., 1.);
             float3 sampleColour = SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, sampleUV).rgb;
 
             // Calculate weight w_i
             float3 w_i;
-            w_i.r = max(_ScatterWeights.r,0.01) * (_NearFarBalance * Gaussian1D(offset, max(_SigmaNear.r, 0.01)) + (1 - _NearFarBalance) * Gaussian1D(offset, max(_SigmaFar.r, 0.01)));
-            w_i.g = max(_ScatterWeights.g,0.01) * (_NearFarBalance * Gaussian1D(offset, max(_SigmaNear.g, 0.01)) + (1 - _NearFarBalance) * Gaussian1D(offset, max(_SigmaFar.g, 0.01)));
-            w_i.b = max(_ScatterWeights.b,0.01) * (_NearFarBalance * Gaussian1D(offset, max(_SigmaNear.b, 0.01)) + (1 - _NearFarBalance) * Gaussian1D(offset, max(_SigmaFar.b, 0.01)));
+            w_i.r = balance * Gaussian1D(offset, max(nearSigma.r, 0.01)) + (1 - balance) * Gaussian1D(offset, max(farSigma.r, 0.01));
+            w_i.g = balance * Gaussian1D(offset, max(nearSigma.g, 0.01)) + (1 - balance) * Gaussian1D(offset, max(farSigma.g, 0.01));
+            w_i.b = balance * Gaussian1D(offset, max(nearSigma.b, 0.01)) + (1 - balance) * Gaussian1D(offset, max(farSigma.b, 0.01));
 
             sum += sampleColour * w_i;
-            totalweight += w_i;
+            totalWeight += w_i;
         }
 
-        return float4(sum/max(totalweight,0.0001), 1.0);
+        return float4(sum / max(totalWeight, 0.0001), 1.0);
     }
-    
+
     float4 HorizontalBlur(Varyings input) : SV_Target
     {
-        return Convolve(input.texcoord, float2(1,0));
+        return Convolve(input.texcoord, float2(1, 0));
     }
 
     float4 VerticalBlur(Varyings input) : SV_Target
     {
-        return Convolve(input.texcoord, float2(0,1));
+        return Convolve(input.texcoord, float2(0, 1));
     }
-
     ENDHLSL
 
     SubShader
@@ -654,14 +750,14 @@ Shader "bentoBAUX/FX/ArtistFriendlyKernel"
 ```
 </details>
 
-In Unity, this shader is used through a material. We assign that material in the render feature settings, and the RenderGraph pass later uses it for the horizontal and vertical SSS blur passes in sections 3a and 3b in `SSSSRenderPass.cs`.
+In Unity, this shader is used through a material. We assign that material in the render feature settings, and the RenderGraph pass later uses it for the horizontal and vertical SSS blur passes in sections 4a and 4b in `SSSSRenderPass.cs`.
 
 *Show intermediate result*
 
 ---
-## 3. Combine everything
+## 3. Compositing
 
-Now that we have finished adding subsurface scattering to our diffuse lighting, we need to put everything back together. According to our setup in section 4 of `SSSSRenderPass.cs`, we should now have five textures:
+Now that we have finished adding subsurface scattering to our diffuse lighting, we need to put everything back together. According to our setup in section 5 of `SSSSRenderPass.cs`, we should now have five textures:
 
 - `_SceneTex`: The current camera colour texture before the final SSS composite. This is used as a based image so that non-SSS objects remain untouched.
 - `_DiffuseTex`: The unprocessed diffuse lighting of SSS objects.
@@ -801,14 +897,20 @@ Shader "bentoBAUX/Util/Compositor"
 ```
 </details>
 
-## Final result and backlighting limitation
+## 4. Transmission
 
 At this point, the screen-space SSS pipeline is working: we split the lighting, blur the diffuse component, and composite everything back into the scene.
 
 However, this only handles light scattering across the visible surface. It **does not automatically create the strong translucent backlighting effect** you often see around ears, fingers, or thin skin regions. That kind of effect depends on light travelling through the object, which our screen-space blur does not know about.
 
-To approximate this, I added a simple backlighting term directly in `SSSS Master.shader`, based on Jorge Jimenez’s translucency approximation from his [**website**](https://www.iryoku.com/translucency/?utm_source=openai). The output of `CalculateTransmittance()` should be added as an extra term in the master shader. In my implementation, I add it together with the ambient contribution that will be written to `_AmbientTex`.
+To approximate this, I added a simple backlighting term directly in `SSSS Master.shader`, based on Jorge Jimenez’s translucency approximation from his [**website**](https://www.iryoku.com/translucency/?utm_source=openai). Instead of using his original falloff directly, I adapted it into a custom sigma-driven falloff so the transmission response stays consistent with our near/far SSS profile.
 
+**`CalculateTransmittance()` should be added to the diffuse buffer of the master shader.**
+
+> Only add it to the diffuse buffer!
+> {: .title}
+> The transmittance term must be written into the diffuse buffer before the SSS blur pass. This is intentional: backlighting represents light that has entered the material and should therefore be softened by the same subsurface diffusion as the rest of the diffuse lighting. If it is added later in the composite pass, it will stay sharp and pasted-on, which breaks the illusion of light travelling through the surface.
+{: .box-warning}
 <details class="collapsible" markdown="1">
 <summary>
   <span class="collapsible-label">Show:</span>
@@ -819,32 +921,60 @@ To approximate this, I added a simple backlighting term directly in `SSSS Master
 #ifndef SSSSTRANSMISSION_INCLUDED
 #define SSSSTRANSMISSION_INCLUDED
 
-// Code from: https://www.iryoku.com/translucency/?utm_source=openai
-float3 T(float s)
+float _SSSS_GlobalEnabled;
+float _SSSS_NearFarBalance;
+float4 _SSSS_NearSigma;
+float4 _SSSS_FarSigma;
+float _SSSS_ScatterScale;
+float _SSSS_SubsurfaceWeight;
+
+float3 GetTransmissionDistance()
 {
-    return float3(0.233, 0.455, 0.649) * exp(-s * s / 0.0064) +
-        float3(0.1, 0.336, 0.344) * exp(-s * s / 0.0484) +
-        float3(0.118, 0.198, 0.0) * exp(-s * s / 0.187) +
-        float3(0.113, 0.007, 0.007) * exp(-s * s / 0.567) +
-        float3(0.358, 0.004, 0.0) * exp(-s * s / 1.99) +
-        float3(0.078, 0.0, 0.0) * exp(-s * s / 7.41);
+    float balance = saturate(_SSSS_NearFarBalance);
+    float3 nearDistance = max(_SSSS_NearSigma * _SSSS_ScatterScale, 0.0001);
+    float3 farDistance = max(_SSSS_FarSigma * _SSSS_ScatterScale, 0.0001);
+
+    return lerp(farDistance, nearDistance, balance);
 }
 
+// Sigma-driven transmission.
+// Larger sigma means that colour channel survives through more thickness.
+// This falloff is based on Beer-Lambert's Law
+float3 ArtistTransmissionProfile(float thickness)
+{
+    float3 distanceRGB = GetTransmissionDistance();
+    float3 transmission = exp(-thickness / distanceRGB);
+
+    return saturate(transmission);
+}
+
+float GetTransmissionScaleAmount()
+{
+    // Blender has a max of 10. Our _SSSS_ScatterScale is capped at 10 so this does not really matter but imma leave it here just in case I wanna remove the cap someday.
+    const float REFERENCE_SCATTER_SCALE = 10.0;
+    return saturate(_SSSS_ScatterScale / REFERENCE_SCATTER_SCALE);
+}
+
+// Code from: https://www.iryoku.com/translucency/?utm_source=openai
+// Output of this should be added as an additional term in the master shader.
 float3 CalculateTransmittance(Surf surfaceData, Light lightData)
 {
+    if (_SSSS_GlobalEnabled < 0.5)
+        return 0.0;
+
     float3 N = normalize(surfaceData.normalWS);
     float3 L = normalize(lightData.direction);
 
-    float irradiance = max(0.3 + dot(-N, L), 0.0);
-    float lightAtten = lightData.distanceAttenuation * lightData.shadowAttenuation;
-
+    float backLight = saturate((dot(-N, L) + 0.3) / (1.0 + 0.3));
+    float lightAtten = lightData.distanceAttenuation;
     float s = surfaceData.thickness;
+    float scaleAmount = GetTransmissionScaleAmount();
+    float3 transmittance = ArtistTransmissionProfile(s) * lightData.color * lightAtten * surfaceData.baseColor.rgb * backLight;
 
-    float3 transmittance = T(s) * lightData.color * lightAtten * surfaceData.baseColor.rgb * irradiance;
-
-    return transmittance;
+    return transmittance * scaleAmount * saturate(_SSSS_SubsurfaceWeight);
 }
 #endif
-
 ```
 </details>
+
+Limitation: this isnt a per object sss. it is one setting for all objects in the scene.
