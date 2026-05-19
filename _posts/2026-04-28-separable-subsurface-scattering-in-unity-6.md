@@ -67,7 +67,7 @@ float4 frag(Varyings IN) : SV_Target0
 ```
 Here, `LightLoop()` calculates the lighting using two structs: `inputData` and `surfaceData`.
 
-`inputData` is mainly required by URP’s lighting system, especially the Forward+ light loop. `surfaceData` is our own shader data struct, used to store the material information needed by our lighting functions. There is some overlap between them, such as position, normal, and view direction. That is fine: `inputData` is for URP, while `surfaceData` is for our own lighting code.
+`inputData` is mainly required by URP’s lighting system, especially the [**Forward+**](https://docs.unity3d.com/6000.3/Documentation/Manual/urp/rendering/forward-rendering-paths.html) light loop. `surfaceData` is our own shader data struct, used to store the material information needed by our lighting functions. There is some overlap between them, such as position, normal, and view direction. That is fine: `inputData` is for URP, while `surfaceData` is for our own lighting code.
 
 The shader currently writes the final `float4` colour value into `SV_Target0` after all lighting calculations are complete. To split this up, we can define a custom fragment output `struct` with each field mapped to a different colour target:
 
@@ -99,7 +99,7 @@ By using the `SV_Target[i]` semantics, we have only labelled where each output s
 
 So far, only our diffuse output will render because `SV_Target0` is usually bound to the camera colour target in normal render passes. Since nothing stores the other specular and ambient lighting information, the other two colour targets won't be rendered.
 
-To fix this, we must create our own custom render pass that properly receives all three outputs as separate render textures. This can be done in Unity 6 by creating a custom [**`ScriptableRenderFeature`**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.3/api/UnityEngine.Rendering.Universal.ScriptableRendererFeature.html)(SRF) with a [**`ScriptableRenderPass`**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.3/api/UnityEngine.Rendering.Universal.ScriptableRenderPass.html). An SRF is a component that can be added to a scriptable renderer like URP to modify how the scene is rendered. It configures and enqueues render passes that contain the actual rendering work. 
+To fix this, we must create our own custom render pass that properly receives all three outputs as separate render textures. This can be done in Unity 6 by creating a custom [**`ScriptableRenderFeature`**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.3/api/UnityEngine.Rendering.Universal.ScriptableRendererFeature.html) with a [**`ScriptableRenderPass`**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.3/api/UnityEngine.Rendering.Universal.ScriptableRenderPass.html). A `ScriptableRenderFeature` is a component that can be added to a scriptable renderer like URP to modify how the scene is rendered. It configures and enqueues render passes that ~~contain the actual rendering work.~~ ***the shaders do <- improve explanation.***
 
 > How to remember the difference?
 > {: .title}
@@ -109,11 +109,22 @@ To fix this, we must create our own custom render pass that properly receives al
 > `ScriptableRenderPass` tells URP: *“Here is what to do when that operation runs.”*
 {: .box-tip}
 
-#### 1.3 Setting up the render feature
+##### 1.21 Setting up the render feature
 
 In our case, we want a render feature that tells URP to insert our custom lighting pipeline into the renderer. This pipeline captures the diffuse, specular, and ambient lighting buffers, processes the diffuse buffer for subsurface scattering, and then combines everything back into the final image. It is also here where we allow the user to customise the settings for how the subsurface scattering should look.
 
 This is mostly boilerplate. It simply creates our custom render pass, gives it our settings, and inserts it into URP. For the basic steps of adding a render feature to URP, see [**this**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@16.0/manual/urp-renderer-feature-how-to-add.html). 
+
+Below are the exposed SSS settings, followed by the full code:
+
+| Setting            | Type / Range | What it controls                                                                                                                                                                |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `subsurfaceWeight` | `0.0 – 1.0`  | Controls how strongly the blurred subsurface result is blended into the final image. `0.0` gives the original unblurred diffuse lighting, while `1.0` uses the full SSS result. |
+| `scatterScale`     | `0.0 – 10.0` | Globally scales how far the scattering spreads. Higher values make the effect wider, softer, and more translucent.                                                              |
+| `nearFarBalance`   | `0.0 – 1.0`  | Blends between wide scattering and tight scattering. Lower values give softer, wider scattering. Higher values keep the effect closer to the original surface detail.           |
+| `nearSigma`        | `Vector4`    | Controls the tight scattering colour. This keeps the effect close to the original pixel and preserves sharper detail.                                                           |
+| `farSigma`         | `Vector4`    | Controls the wide scattering colour. This spreads light further and creates softer colour bleeding.                                                                             |
+| `stepCount`        | `int`        | Sets the number of samples used by the blur kernel.                                                                                                                             |
 
 <details class="collapsible" markdown="1">
 <summary>
@@ -155,7 +166,6 @@ public class SSSSSettings
 
     // Number of samples used by the blur kernel.
     // Hidden because this is currently fixed internally rather than exposed as an artist setting.
-    [HideInInspector]
     public int stepCount = 32;
 }
 
@@ -221,7 +231,7 @@ Nothing particularly SSSS-specific happens inside the `ScriptableRenderFeature`,
 
 The important part is the `ScriptableRenderPass`. This is where we actually create the lighting buffers, bind them as render targets, run the blur passes, and composite the final image.
 
-#### 1.4 Building the render pass
+##### 1.22 Setting up the render pass
 
 In Unity 6, the `ScriptableRenderPass` workflow has changed slightly. In older URP versions, a custom pass usually meant giving Unity a sequence of rendering commands and manually managing temporary render textures yourself.
 
@@ -232,7 +242,7 @@ For our SSS pipeline, the render pass has **six main parts**:
 1. Apply our settings to the shaders.
 2. Create temporary lighting buffers.
 3. Render the SSS objects into separate diffuse, specular, and ambient textures.
-4. Blur the diffuse texture.
+4. Performing SSS
    1. Blur the diffuse texture horizontally.
    2. Blur the result vertically.
 5. Composite the blurred diffuse lighting with the other lighting components.
@@ -532,12 +542,12 @@ public class SSSSRenderPass : ScriptableRenderPass
 ```
 </details>
 
-*Show diffuse, ambient and specular parts*
+------------- *Show diffuse, ambient and specular parts* -------------
 
 ---
-## 2. Blur the diffuse lighting
+## 2. Performing SSS
 
-With the RenderGraph pipeline setup now, you may have also noticed that in `SSSSRenderPass.cs`, we had references to several materials in passes 3, 4 and 5. These are intentional. They are custom shader materials used to **perform the actual image processing work** in those passes. Here, we will write our custom shader for our separable subsurface scattering using Jorge Jimenez's artist friendly kernel. 
+With the RenderGraph pipeline setup now, you may have also noticed that in `SSSSRenderPass.cs`, we had references to several materials in section 4, 5 and 6. These are intentional. They are custom shader materials used to **perform the actual image processing work** in those passes. Here, we will write our custom shader for our separable subsurface scattering using Jorge Jimenez's artist friendly kernel. 
 
 Jorge Jimenez's paper on [**separable subsurface scattering**](https://www.cg.tuwien.ac.at/research/publications/2015/Jimenez_SSS_2015/Jimenez_SSS_2015-paper.pdf#page=0.99) shows us how subsurface scattering can be approximated not only more efficiently but also more physically accurate in screen space. 
 
@@ -575,7 +585,7 @@ $$
 where $$s = \text{_SSSS_ScatterScale}$$. The kernel then becomes:
 
 $$
-a_m(r)
+a(r)
 =
 wG(r,\sigma'_\text{near})
 +
@@ -587,7 +597,7 @@ Here, $$w$$ controls the balance between short-range and long-range scattering, 
 The full separable 2D kernel is simply:
 
 $$
-A_m(x,y) = a_m(x)a_m(y)
+A(x,y) = a(x)a(y)
 $$
 
 which is represented implicitly in the code later by applying the same 1D convolution twice.
@@ -596,57 +606,39 @@ which is represented implicitly in the code later by applying the same 1D convol
 
 Before we can write the code, we must firstly understand how the convolution works. 
 
-Again at a high level, convolution means that for each pixel, we look at nearby samples, give each sample a weight, and blend them together. Samples close to the centre usually contribute more, while samples further away contribute less. For our SSS blur, those weights come from the artist-friendly kernel described above.
+Again at a high level, convolution means that for each pixel, we look at nearby samples and give each one a weight. Each sample colour is multiplied by its weight, and all weighted samples are then summed together to produce the new colour of the current pixel. Samples close to the centre usually contribute more, while samples further away contribute less. For our SSS blur, those weights come from the artist-friendly kernel described above.
 
-We can describe the continuous 1D convolution as:
+For one horizontal or vertical pass, we can write the continuous 1D convolution as:
 
 $$
-C_\text{out}(u)
+M_e(u)
 =
 \int_{-\infty}^{\infty}
-C(u')a_m(u-u')\,du'
+E(u')a(u-u')\,du'
 $$
+
+This looks scary but it just means: to compute the new diffuse colour $$M_e(u)$$, we add up infinitely many neighbouring colours. Each neighbour is multiplied by a scattering weight from the kernel $$a$$, based on how far that neighbour is from $$u$$. 
+
+This makes sense because light can enter at one point of a material like skin, scatter internally, and exit somewhere nearby. The final colour at a point depends on the light received by its surrounding neighbours too.
 
 In code, however, we cannot sample infinitely many points. So we approximate the integral with a finite weighted sum:
 
 $$
-C_\text{out}(u)
-=
+M_e(u)
+\approx
 \frac{
 \sum_{i=-N}^{N}
-C(u + i\Delta u)a_m(|i|)
+E(u_i)\,a(u-u_i)
 }{
 \sum_{i=-N}^{N}
-a_m(|i|)
+a(u-u_i)
 }
 $$
 
-Here, $$N$$ is the number of steps on each side of the current pixel, $$\Delta u$$ is the spacing between samples, and $$a_m(\lvert i \rvert)$$ is the kernel weight for the $$i$$-th sample. The final colour of the pixel $$u$$ is written as $$C_\text{out}(u)$$.
+Here, we only consider a fixed number of samples $$N$$ on each side of the pixel $$u$$. The numerator sums them up and the denominator normalises them so that the brightness stays stable when we adjust the kernel parameters.
 
-We use $$\lvert i \rvert$$ because the kernel only depends on distance from the centre, not whether the sample is to the left, right, above, or below the current pixel. In our case, we only sample along one axis at a time. For the horizontal pass, the samples move left and right. For the vertical pass, the samples move up and down.
-
-The division by the total kernel weight normalises the result, keeping the brightness stable when we adjust the kernel parameters.
-
-To avoid rewriting the same logic for the horizontal and vertical passes, we only change the sampling direction. Conceptually, the offset for each sample is:
-
-$$
-\Delta uv
-=
-\text{direction} \cdot \text{texelSize}
-$$
-
-So the $$i$$-th sample position becomes:
-
-$$
-uv_i
-=
-uv + i\Delta uv
-$$
-
-A direction of $$(1,0)$$ gives us the horizontal pass, while a direction of $$(0,1)$$ gives us the vertical pass.
-
-With that in mind, the shader code becomes a direct translation of the concepts above, but evaluated separately for each colour channel. This matters because red, green, and blue light can scatter differently within the same material.
-
+As shown in section 4a and 4b in `SSSSRenderPass.cs`, this shader is used through a material `SSSSMaterial`. The convolution is performed twice: once for horizontal and once for vertical. The code remains the same, only the direction changes.
+ 
 <details class="collapsible" markdown="1">
 <summary>
   <span class="collapsible-label">Show:</span>
@@ -677,27 +669,33 @@ Shader "bentoBAUX/FX/ArtistFriendlyKernel"
     float4 Convolve(float2 uv, float2 direction)
     {
         float2 texelSize = 1.0 / _ScreenParams.xy;
+
         float3 sum = 0.0;
         float3 totalWeight = 0.;
+
         float balance = saturate(_SSSS_NearFarBalance);
 
         float spreadMultiplier = 2; // I have added a spread multiplier for aesthetics reasons.
         float scatterRadius = max(_SSSS_ScatterScale * spreadMultiplier, 0.01);
+
         float3 nearSigma = max(_SSSS_NearSigma.rgb * scatterRadius, 0.01);
         float3 farSigma = max(_SSSS_FarSigma.rgb * scatterRadius, 0.01);
 
         for (int i = -_SSSS_StepCount; i <= _SSSS_StepCount; i++)
         {
             float offset = abs((float)i);
+
+            // Move along the chosen blur axis and keep samples inside the screen.
             float2 sampleUV = clamp(uv + direction * texelSize * i, 0., 1.);
             float3 sampleColour = SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, sampleUV).rgb;
 
-            // Calculate weight w_i
+            // Calculate the weights w_i of u's every neighbouring pixels u_i.
             float3 w_i;
             w_i.r = balance * Gaussian1D(offset, max(nearSigma.r, 0.01)) + (1 - balance) * Gaussian1D(offset, max(farSigma.r, 0.01));
             w_i.g = balance * Gaussian1D(offset, max(nearSigma.g, 0.01)) + (1 - balance) * Gaussian1D(offset, max(farSigma.g, 0.01));
             w_i.b = balance * Gaussian1D(offset, max(nearSigma.b, 0.01)) + (1 - balance) * Gaussian1D(offset, max(farSigma.b, 0.01));
 
+            // Accumulate the weighted colour and track the total weight for normalisation.
             sum += sampleColour * w_i;
             totalWeight += w_i;
         }
@@ -750,9 +748,7 @@ Shader "bentoBAUX/FX/ArtistFriendlyKernel"
 ```
 </details>
 
-In Unity, this shader is used through a material. We assign that material in the render feature settings, and the RenderGraph pass later uses it for the horizontal and vertical SSS blur passes in sections 4a and 4b in `SSSSRenderPass.cs`.
-
-*Show intermediate result*
+------------- *Show intermediate result* ------------- 
 
 ---
 ## 3. Compositing
@@ -765,42 +761,7 @@ Now that we have finished adding subsurface scattering to our diffuse lighting, 
 - `_SpecularTex`: The specular lighting of SSS objects.  
 - `_AmbientTex`: The ambient or indirect lighting of the SSS objects. This and `_SpecularTex` were kept separate so they do not get blurred.
 
-Putting these together is simply computing their sum. However, because our diffuse texture was originally rendered to `SV_Target0` which is the colour output that ends up in the scene colour, `_SceneTex` already includes the diffuse texture. As a result, `_DiffuseTex` does not need to be included in the sum.
 
-Another caveat to consider is **masking**. Since `_ProcessedDiffuseTex` is created by blurring the diffuse lighting in screen space, the blur does not automatically know where the SSS object ends. Without a mask, the processed diffuse contribution can bleed past the surface silhouette and appear as a glowing outline around the model.
-
-*Include a picture of no mask*
-
-To prevent this, we create a simple mask from `_DiffuseTex`. The idea is straightforward: pixels belonging to the SSS object have diffuse lighting, while unrelated scene pixels are usually black in this buffer.
-
-First, we take the brightest colour channel of the diffuse buffer:
-
-$$
-m_\text{source} = \max(D_r, D_g, D_b)
-$$
-
-Then we convert this value into a soft mask using `smoothstep`:
-
-$$
-m = \operatorname{smoothstep}(a, b, m_\text{source})
-$$
-
-Here, $$a$$ is the lower threshold and $$b$$ is the upper threshold of the mask transition. Values below $$a$$ are treated as outside the SSS object and become $$0$$. Values above $$b$$ are treated as part of the SSS object and become $$1$$. Values between $$a$$ and $$b$$ are smoothly interpolated, giving us a soft boundary instead of a harsh binary edge.
-
-In my case, I found that $$a = 0.01$$ and $$b = 0.1$$ worked well. This means that very dark diffuse values are ignored, while pixels with a stronger diffuse contribution are fully included in the SSS mask.
-
-With this mask, we can now recombine everything:
-
-$$
-C_\text{final} = C_\text{scene} + C_\text{ambient} + C_\text{specular} + m \cdot C_\text{processed}
-$$
-
-> Do we subtract diffuse from the scene texture first?
-> {: .title}
-> One might think that the correct approach is to subtract `_DiffuseTex` from `_SceneTex` before adding `_ProcessedDiffuseTex`. However, in this implementation, that removes too much of the original high-frequency diffuse detail, such as local shading, texture variation, and small surface features. Since `_ProcessedDiffuseTex` is heavily blurred, using it as a full replacement makes the material look waxy and unnatural.
->
-> Instead, I keep the original scene colour and overlay the processed diffuse contribution on top. This is not a perfectly physical composition, but it gives a more stable and visually convincing result for this screen-space implementation.
-{: .box-info}
 
 There is one last RenderGraph detail. We cannot safely read from the `resourceData.activeColorTexture` and write back into that same texture in the same pass. The composite pass therefore writes into a temporary output texture first. After that, we run a small copy pass that copies this temporary result back into the active scene colour texture.
 
