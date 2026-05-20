@@ -22,8 +22,8 @@ The repository can be found [**here**]().
 Above is the overview of the entire pipeline at a high level which can be separated into three major steps:
 
 1. **Split the lighting into separate buffers**: Separate the material into diffuse, specular, and ambient components.  
-2. **Blur the diffuse lighting**: Soften the diffuse part by blurring it horizontally and then vertically to simulate light spreading beneath the surface.  
-3. **Combine everything**: Recombine all components to produce the final image.
+2. **Performing SSS**: Soften the diffuse part by blurring it horizontally and then vertically to simulate light spreading beneath the surface.  
+3. **Compositing the SSS result**: Recombine all components to produce the final image.
 
 Now that we have the big picture, let's dive into the details.
 
@@ -751,21 +751,87 @@ Shader "bentoBAUX/FX/ArtistFriendlyKernel"
 ------------- *Show intermediate result* ------------- 
 
 ---
-## 3. Compositing
+## 3. Compositing the SSS result
 
 Now that we have finished adding subsurface scattering to our diffuse lighting, we need to put everything back together. According to our setup in section 5 of `SSSSRenderPass.cs`, we should now have five textures:
 
-- `_SceneTex`: The current camera colour texture before the final SSS composite. This is used as a based image so that non-SSS objects remain untouched.
+- `_SceneTex`: The current camera colour texture before the final SSS composite. This is our base image that also includes the diffuse texture of our SSS objects.
 - `_DiffuseTex`: The unprocessed diffuse lighting of SSS objects.
 - `_ProcessedDiffuseTex`: The diffuse lighting after two SSS blur passes.
 - `_SpecularTex`: The specular lighting of SSS objects.  
-- `_AmbientTex`: The ambient or indirect lighting of the SSS objects. This and `_SpecularTex` were kept separate so they do not get blurred.
+- `_AmbientTex`: The ambient or indirect lighting of the SSS objects. 
 
+To replace the pixels that belong to our SSS objects while leaving everything else untouched, we need a mask. We can create this from `_DiffuseTex`. Mathematically, we want to assign binary values to our mask $$m$$. $$m=1$$ if `_DiffuseTex` contains the slightest bit of lighting and $$m=0$$ when it is completely black:
 
+$$
+m
+=
+\operatorname{step}
+\left(
+\epsilon,
+\max(D_r, D_g, D_b)
+\right)
+=
+\begin{cases}
+0, & \max(D_r, D_g, D_b) < \epsilon \\
+1, & \max(D_r, D_g, D_b) \ge \epsilon
+\end{cases}
 
-There is one last RenderGraph detail. We cannot safely read from the `resourceData.activeColorTexture` and write back into that same texture in the same pass. The composite pass therefore writes into a temporary output texture first. After that, we run a small copy pass that copies this temporary result back into the active scene colour texture.
+\qquad
+\epsilon = 0.0001
+$$
 
-Below is the final code for the compositor:
+To blend between normal diffuse and the SSS output, we do a simple linear interpolation:
+
+$$
+D_\text{sss}
+=
+\operatorname{lerp}
+\left(
+D,
+D_\text{blurred},
+w
+\right)
+=
+(1-w)D
++
+wD_\text{blurred}
+$$
+
+$$
+w = \text{_SSSS_SubsurfaceWeight}
+$$
+
+Finally, we recombine $$D_\text{sss}$$ with the rest of the scene with another lerp:
+
+$$
+C_\text{final}
+=
+\operatorname{lerp}
+\left(
+C_\text{scene},
+C_\text{sss},
+m
+\right)
+=
+(1-m)C_\text{scene}
++
+mC_\text{sss}
+$$
+
+$$
+C_\text{sss}
+=
+D_\text{sss}
++
+S
++
+A
+$$
+
+Here, if $$m=1$$, $$C_\text{final}=C_\text{scene}$$. Else, $$C_\text{final}=C_\text{sss}$$.
+
+Below is the translation into code:
 
 <details class="collapsible" markdown="1">
 <summary>
@@ -795,6 +861,8 @@ Shader "bentoBAUX/Util/Compositor"
     TEXTURE2D(_AmbientTex);
     SAMPLER(sampler_AmbientTex);
 
+    float _SSSS_SubsurfaceWeight;
+
     float4 CompositeFrag(Varyings input) : SV_Target
     {
         float2 uv = input.texcoord;
@@ -805,12 +873,18 @@ Shader "bentoBAUX/Util/Compositor"
         float3 specular = SAMPLE_TEXTURE2D(_SpecularTex, sampler_SpecularTex, uv).rgb;
         float3 ambient = SAMPLE_TEXTURE2D(_AmbientTex, sampler_AmbientTex, uv).rgb;
 
-        // Mask out the irrelevant scene objects
+        // Use the diffuse buffer as a simple mask for pixels rendered by the SSS shader.
         float maskSource = max(diffuse.r, max(diffuse.g, diffuse.b));
-        float mask = smoothstep(0.01, 0.1, maskSource);
-        float3 maskTex = (float3)mask; // Debugging purposes
+        float mask = step(0.0001, maskSource);
 
-        float3 finalColour = sceneColour + ambient + specular + mask * processed;
+        // Blend between the original diffuse lighting and the blurred SSS result.
+        float3 sssRatio = lerp(diffuse, processed, _SSSS_SubsurfaceWeight);
+
+        // Recombine the blurred diffuse with the sharp lighting components.
+        float3 sssColour = sssRatio + specular + ambient;
+
+        // Keep non-SSS scene objects untouched.
+        float3 finalColour = lerp(sceneColour, sssColour, mask);
 
         return float4(finalColour, 1.0);
     }
@@ -858,11 +932,12 @@ Shader "bentoBAUX/Util/Compositor"
 ```
 </details>
 
-## 4. Transmission
+There is one last RenderGraph detail in `SSSSRenderPass.cs`. We cannot safely read from the `resourceData.activeColorTexture` and write back into that same texture in the same pass. The `CompositeFrag()` therefore writes into a temporary output texture first. After that, we run `CopyFrag()` that copies this temporary result back into the active scene colour texture.
 
-At this point, the screen-space SSS pipeline is working: we split the lighting, blur the diffuse component, and composite everything back into the scene.
 
-However, this only handles light scattering across the visible surface. It **does not automatically create the strong translucent backlighting effect** you often see around ears, fingers, or thin skin regions. That kind of effect depends on light travelling through the object, which our screen-space blur does not know about.
+## BONUS: Transmission
+
+At this point, the screen-space SSS pipeline is working. However, this only handles light scattering across the visible surface. It **does not include backlighting effect** you often see around ears, fingers, or thin skin regions. That kind of effect depends on light travelling through the object, which our screen-space blur does not know about.
 
 To approximate this, I added a simple backlighting term directly in `SSSS Master.shader`, based on Jorge Jimenez’s translucency approximation from his [**website**](https://www.iryoku.com/translucency/?utm_source=openai). Instead of using his original falloff directly, I adapted it into a custom sigma-driven falloff so the transmission response stays consistent with our near/far SSS profile.
 
