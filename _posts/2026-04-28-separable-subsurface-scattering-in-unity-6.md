@@ -21,14 +21,14 @@ The repository can be found [**here**]().
 
 Above is the overview of the entire pipeline at a high level which can be separated into three major steps:
 
-1. **Split the lighting into separate buffers**: Separate the material into diffuse, specular, and ambient components.  
-2. **Performing SSS**: Soften the diffuse part by blurring it horizontally and then vertically to simulate light spreading beneath the surface.  
-3. **Compositing the SSS result**: Recombine all components to produce the final image.
+1. **Splitting diffuse, specular, and ambient lighting**: Separate the material into diffuse, specular, and ambient components.  
+2. **Scattering the diffuse lighting**: Soften the diffuse part by blurring it horizontally and then vertically to simulate light spreading beneath the surface.  
+3. **Reconstructing the final image**: Recombine all components to produce the final image.
 
 Now that we have the big picture, let's dive into the details.
 
 ---
-## 1. Split the lighting into separate buffers
+## 1. Splitting diffuse, specular, and ambient lighting
 Our goal in this step is to neatly separate the diffuse, specular, and ambient components of the lighting for the next stage of our pipeline. This step is necessary since the subsurface scattering pass will only operate on the diffuse part of the lighting.
 
 > Why diffuse part only?
@@ -545,7 +545,7 @@ public class SSSSRenderPass : ScriptableRenderPass
 ------------- *Show diffuse, ambient and specular parts* -------------
 
 ---
-## 2. Performing SSS
+## 2. Scattering the diffuse lighting
 
 With the RenderGraph pipeline setup now, you may have also noticed that in `SSSSRenderPass.cs`, we had references to several materials in section 4, 5 and 6. These are intentional. They are custom shader materials used to **perform the actual image processing work** in those passes. Here, we will write our custom shader for our separable subsurface scattering using Jorge Jimenez's artist friendly kernel. 
 
@@ -751,7 +751,7 @@ Shader "bentoBAUX/SSSS Util/ArtistFriendlyKernel"
 ------------- *Show intermediate result* ------------- 
 
 ---
-## 3. Compositing the SSS result
+## 3. Reconstructing the final image
 
 Now that we have finished adding subsurface scattering to our diffuse lighting, we need to put everything back together. According to our setup in section 5 of `SSSSRenderPass.cs`, we should now have five textures:
 
@@ -935,7 +935,7 @@ Shader "bentoBAUX/SSSS Util/Compositor"
 There is one last RenderGraph detail in `SSSSRenderPass.cs`. We cannot safely read from the `resourceData.activeColorTexture` and write back into that same texture in the same pass. The `CompositeFrag()` therefore writes into a temporary output texture first. After that, we run `CopyFrag()` that copies this temporary result back into the active scene colour texture.
 
 
-## BONUS: Transmission
+## Bonus: Adding Transmission
 
 At this point, the screen-space SSS pipeline is working. However, this only handles light scattering across the visible surface. It **does not include backlighting effect** you often see around ears, fingers, or thin skin regions. That kind of effect depends on light travelling through the object, which our screen-space blur does not know about.
 
@@ -1013,4 +1013,25 @@ float3 CalculateTransmittance(Surf surfaceData, Light lightData)
 ```
 </details>
 
+## Showcase
+
+
+## Material Presets
+
+
+## Limitations
+
+
+Preset part
 Limitation: this isnt a per object sss. it is one setting for all objects in the scene.
+ADD A LAYER CALLED SSSS
+NO FOG SUPPORT
+
+
+
+SHOWCASE:
+
+setup: perseus/woman model with randomly moving lights.
+show: showcase sss with diff materials. for perseus we do skin, wax, marble, jade. woman is just woman with diff skin tones.
+documentation: use shader ball to showcase Scatter Weight, Scatter Scale, RGB Scatter Distances, Sample Count, Performance.
+
