@@ -646,7 +646,7 @@ As shown in section 4a and 4b in `SSSSRenderPass.cs`, this shader is used throug
 </summary>
 
 ```hlsl
-Shader "bentoBAUX/FX/ArtistFriendlyKernel"
+Shader "bentoBAUX/SSSS Util/ArtistFriendlyKernel"
 {
     HLSLINCLUDE
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -840,7 +840,7 @@ Below is the translation into code:
 </summary>
 
 ```hlsl
-Shader "bentoBAUX/Util/Compositor"
+Shader "bentoBAUX/SSSS Util/Compositor"
 {
     HLSLINCLUDE
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
