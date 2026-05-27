@@ -1015,79 +1015,6 @@ float3 CalculateTransmittance(Surf surfaceData, Light lightData)
 
 ## Showcase
 
-To make the behaviour of the shader easier to compare, each showcase keeps the scene, camera, lighting, and post-processing fixed. Only the demonstrated parameter changes between renders.
-
-#### Material Presets
-A comparison of several material presets using the same shaderball setup. Each material uses a different scattering profile to demonstrate how subsurface scattering affects a wide range of translucent surfaces. 
-
-A complete table containing all preset parameter values is provided after this showcase section.
-
-{% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/Different Materials.png"
-   alt="Material preset comparison"
-   caption="Comparing ketchup, jade, marble, skin and wax"
-   max_width="1920px"
-%}
-
-
-#### Subsurface Weight
-
-The subsurface weight controls the blend between the original diffuse lighting and the processed subsurface result. Lower values preserve the original surface shading, while higher values reveal more of the scattered diffuse contribution.
-
-{% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/Subsurface Weight.png"
-   alt="Subsurface weight comparison"
-   caption="Subsurface Weight from 0.0 to 1.0"
-   max_width="1920px"
-%}
-
-
-#### Scatter Scale
-
-
-Scatter scale acts as a global multiplier for the scattering distances. Increasing it spreads the subsurface effect further across the surface.
-
-{% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/Scatter Scale.png"
-   alt="Scatter scale comparison"
-   caption="Scatter Scale from 0.0 to 10.0"
-   max_width="1920px"
-%}
-
-#### Near/Far Balance
-
-The near/far balance controls the blend between the short-range and long-range scattering profiles. Lower values favour broader far scattering, while higher values favour tighter near scattering.
-
-{% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/NFB.png"
-   alt="Near far balance comparison"
-   caption="Near/Far Balance from 0.0 to 1.0"
-   max_width="1920px"
-%}
-
-
-#### Near Sigma
-
-Near sigma controls the short-range scattering profile. This mainly affects local softness and how much small surface detail is preserved.
-
-{% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/Near Sigma.png"
-   alt="Near sigma comparison"
-   caption="Near sigma values: (0.45, 0.55, 0.65), (0.8, 0.9, 1.0), (1.4, 1.6, 1.8)"
-   max_width="1920px"
-%}
-
-#### Far Sigma
-
-Far sigma controls the long-range scattering profile. Higher values create broader diffusion and a softer, more translucent material response.
-
-{% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/Far Sigma.png"
-   alt="Far sigma comparison"
-   caption="Far sigma values: (1.8, 2.2, 2.5), (3.2, 3.8, 4.2), (5.5, 6.5, 7.2)"
-   max_width="1920px"
-%}
-
 #### Perseus
 
 This showcase uses the Perseus model by [**leofinearts**](https://sketchfab.com/3d-models/perseus-53d894b3cc184012afaa70f4b3b2ddce) on Sketchfab. The model is used here as a consistent sculptural test subject for comparing the skin, marble, jade and wax material presets.
@@ -1109,6 +1036,83 @@ This showcase uses the Perseus model by [**leofinearts**](https://sketchfab.com/
 This showcase uses the free HD head model from [**3D Scan Store**](https://www.3dscanstore.com/blog/Free-3D-Head-Model) as a high-detail skin test subject. The asset includes head geometry, supporting facial meshes, and 8K texture maps, making it useful for evaluating subsurface scattering on realistic skin.
 
 ![Woman](../assets/img/sss-unity-6/Woman/Woman.png)
+
+#### Parameter Study
+To make the behaviour of the shader easier to compare, each showcase keeps the scene, camera, lighting, and post-processing fixed. Only the demonstrated parameter changes between renders.
+
+
+##### Material Presets
+A comparison of several material presets using the same shaderball setup. Each material uses a different scattering profile to demonstrate how subsurface scattering affects a wide range of translucent surfaces. 
+
+A complete table containing all preset parameter values is provided after this showcase section.
+
+{% include add-image-with-caption.html
+   src="../assets/img/sss-unity-6/ShaderBall/Different Materials.png"
+   alt="Material preset comparison"
+   caption="Comparing ketchup, jade, marble, skin and wax"
+   max_width="1920px"
+%}
+
+
+##### Subsurface Weight
+
+The subsurface weight controls the blend between the original diffuse lighting and the processed subsurface result. Lower values preserve the original surface shading, while higher values reveal more of the scattered diffuse contribution.
+
+{% include add-image-with-caption.html
+   src="../assets/img/sss-unity-6/ShaderBall/Subsurface Weight.png"
+   alt="Subsurface weight comparison"
+   caption="Subsurface Weight from 0.0 to 1.0"
+   max_width="1920px"
+%}
+
+
+##### Scatter Scale
+
+
+Scatter scale acts as a global multiplier for the scattering distances. Increasing it spreads the subsurface effect further across the surface.
+
+{% include add-image-with-caption.html
+   src="../assets/img/sss-unity-6/ShaderBall/Scatter Scale.png"
+   alt="Scatter scale comparison"
+   caption="Scatter Scale from 0.0 to 10.0"
+   max_width="1920px"
+%}
+
+##### Near/Far Balance
+
+The near/far balance controls the blend between the short-range and long-range scattering profiles. Lower values favour broader far scattering, while higher values favour tighter near scattering.
+
+{% include add-image-with-caption.html
+   src="../assets/img/sss-unity-6/ShaderBall/NFB.png"
+   alt="Near far balance comparison"
+   caption="Near/Far Balance from 0.0 to 1.0"
+   max_width="1920px"
+%}
+
+
+##### Near Sigma
+
+Near sigma controls the short-range scattering profile. This mainly affects local softness and how much small surface detail is preserved.
+
+{% include add-image-with-caption.html
+   src="../assets/img/sss-unity-6/ShaderBall/Near Sigma.png"
+   alt="Near sigma comparison"
+   caption="Near sigma values: (0.45, 0.55, 0.65), (0.8, 0.9, 1.0), (1.4, 1.6, 1.8)"
+   max_width="1920px"
+%}
+
+##### Far Sigma
+
+Far sigma controls the long-range scattering profile. Higher values create broader diffusion and a softer, more translucent material response.
+
+{% include add-image-with-caption.html
+   src="../assets/img/sss-unity-6/ShaderBall/Far Sigma.png"
+   alt="Far sigma comparison"
+   caption="Far sigma values: (1.8, 2.2, 2.5), (3.2, 3.8, 4.2), (5.5, 6.5, 7.2)"
+   max_width="1920px"
+%}
+
+
 
 ## Material Presets
 
