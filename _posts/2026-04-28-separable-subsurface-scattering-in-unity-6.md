@@ -1077,8 +1077,6 @@ Near sigma controls the short-range scattering profile. This mainly affects loca
    max_width="1920px"
 %}
 
-
-
 #### Far Sigma
 
 Far sigma controls the long-range scattering profile. Higher values create broader diffusion and a softer, more translucent material response.
@@ -1089,6 +1087,28 @@ Far sigma controls the long-range scattering profile. Higher values create broad
    caption="Far sigma values: (1.8, 2.2, 2.5), (3.2, 3.8, 4.2), (5.5, 6.5, 7.2)"
    max_width="1920px"
 %}
+
+#### Perseus
+
+This showcase uses the Perseus model by [**leofinearts**](https://sketchfab.com/3d-models/perseus-53d894b3cc184012afaa70f4b3b2ddce) on Sketchfab. The model is used here as a consistent sculptural test subject for comparing the skin, marble, jade and wax material presets.
+
+{% include slide-show.html
+  slides="
+  /assets/img/sss-unity-6/Perseus/Still/Skin.png | Perseus Skin ;
+  /assets/img/sss-unity-6/Perseus/Still/Marble.png | Perseus Marble ;
+  /assets/img/sss-unity-6/Perseus/Still/Jade.png | Perseus Jade ;
+  /assets/img/sss-unity-6/Perseus/Still/Wax.png | Perseus Wax ;
+  "
+  max_width="1920px"
+  dots="true"
+  autoplay="false"
+%}
+
+#### Digital Human
+
+This showcase uses the free HD head model from [**3D Scan Store**](https://www.3dscanstore.com/blog/Free-3D-Head-Model) as a high-detail skin test subject. The asset includes head geometry, supporting facial meshes, and 8K texture maps, making it useful for evaluating subsurface scattering on realistic skin.
+
+![Woman](../assets/img/sss-unity-6/Woman/Woman.png)
 
 ## Material Presets
 

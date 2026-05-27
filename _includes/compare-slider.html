@@ -11,7 +11,7 @@
 
 <style>
   .ba-wrap{position:relative;max-width:{{ max_w }};margin:0.25rem 0;line-height:0;user-select:none;touch-action:none}
-  .ba-wrap img{display:block;width:100%;height:auto;user-select:none;pointer-events:none}
+  .ba-wrap img{display:block;width:100%;height:auto;user-select:none;pointer-events:none;border-radius:15px;}
   .ba-top{position:absolute;inset:0;overflow:hidden;z-index:1}
   .ba-handle{position:absolute;top:0;bottom:0;width:2px;background:currentColor;opacity:.9;cursor:ew-resize;z-index:3}
   .ba-grip{position:absolute;top:50%;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:999px;border:2px solid currentColor;background:rgba(255,255,255,.85);display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.15)}
@@ -34,77 +34,77 @@
 {% endif %}
 
 <script>
-(function(){
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, {once:true});
-    console.log("compare-slider: waiting for DOMContentLoaded");
-  } else {
-    console.log("compare-slider: DOM already loaded");
-    init();
-  }
-
-  function init(){
-    console.log("compare-slider: init running");
-
-    var wrap = document.getElementById('{{ _id }}');
-    console.log("compare-slider: wrap =", wrap);
-
-    if(!wrap) {
-      console.warn("compare-slider: wrap not found for id {{ _id }}");
-      return;
+  (function(){
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init, {once:true});
+      console.log("compare-slider: waiting for DOMContentLoaded");
+    } else {
+      console.log("compare-slider: DOM already loaded");
+      init();
     }
 
-    var top = wrap.querySelector('.ba-top');
-    var handle = wrap.querySelector('.ba-handle');
-    var grip = wrap.querySelector('.ba-grip');
-    console.log("compare-slider: found elements", {top, handle, grip});
+    function init(){
+      console.log("compare-slider: init running");
 
-    function setSplit(pct){
-      pct = Math.max(0, Math.min(100, pct));
-      top.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
-      handle.style.left = pct + '%';
-      grip.style.left = pct + '%';
-    }
-    setSplit({{ start }});
-    console.log("compare-slider: initial split set to {{ start }}%");
+      var wrap = document.getElementById('{{ _id }}');
+      console.log("compare-slider: wrap =", wrap);
 
-    function pointerToPct(e){
-      var rect = wrap.getBoundingClientRect();
-      var cx = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0].clientX);
-      return ((cx - rect.left) / rect.width) * 100;
-    }
-
-    var dragging = false;
-    function startDrag(e){
-      console.log("compare-slider: drag start", e.type);
-      dragging = true;
-      setSplit(pointerToPct(e));
-      e.preventDefault();
-    }
-    function moveDrag(e){
-      if (dragging) {
-        setSplit(pointerToPct(e));
+      if(!wrap) {
+        console.warn("compare-slider: wrap not found for id {{ _id }}");
+        return;
       }
+
+      var top = wrap.querySelector('.ba-top');
+      var handle = wrap.querySelector('.ba-handle');
+      var grip = wrap.querySelector('.ba-grip');
+      console.log("compare-slider: found elements", {top, handle, grip});
+
+      function setSplit(pct){
+        pct = Math.max(0, Math.min(100, pct));
+        top.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
+        handle.style.left = pct + '%';
+        grip.style.left = pct + '%';
+      }
+      setSplit({{ start }});
+      console.log("compare-slider: initial split set to {{ start }}%");
+
+      function pointerToPct(e){
+        var rect = wrap.getBoundingClientRect();
+        var cx = (e.clientX !== undefined) ? e.clientX : (e.touches && e.touches[0].clientX);
+        return ((cx - rect.left) / rect.width) * 100;
+      }
+
+      var dragging = false;
+      function startDrag(e){
+        console.log("compare-slider: drag start", e.type);
+        dragging = true;
+        setSplit(pointerToPct(e));
+        e.preventDefault();
+      }
+      function moveDrag(e){
+        if (dragging) {
+          setSplit(pointerToPct(e));
+        }
+      }
+      function endDrag(){
+        if (dragging) console.log("compare-slider: drag end");
+        dragging = false;
+      }
+
+      wrap.addEventListener('pointerdown', startDrag);
+      window.addEventListener('pointermove', moveDrag);
+      window.addEventListener('pointerup', endDrag);
+
+      wrap.addEventListener('mousedown', startDrag);
+      window.addEventListener('mousemove', moveDrag);
+      window.addEventListener('mouseup', endDrag);
+
+      wrap.addEventListener('touchstart', startDrag, {passive:false});
+      window.addEventListener('touchmove', moveDrag, {passive:false});
+      window.addEventListener('touchend', endDrag);
+      window.addEventListener('touchcancel', endDrag);
+
+      console.log("compare-slider: event listeners attached");
     }
-    function endDrag(){
-      if (dragging) console.log("compare-slider: drag end");
-      dragging = false;
-    }
-
-    wrap.addEventListener('pointerdown', startDrag);
-    window.addEventListener('pointermove', moveDrag);
-    window.addEventListener('pointerup', endDrag);
-
-    wrap.addEventListener('mousedown', startDrag);
-    window.addEventListener('mousemove', moveDrag);
-    window.addEventListener('mouseup', endDrag);
-
-    wrap.addEventListener('touchstart', startDrag, {passive:false});
-    window.addEventListener('touchmove', moveDrag, {passive:false});
-    window.addEventListener('touchend', endDrag);
-    window.addEventListener('touchcancel', endDrag);
-
-    console.log("compare-slider: event listeners attached");
-  }
-})();
+  })();
 </script>
