@@ -6,7 +6,7 @@ author: bennett
 categories: [Computer Graphics]
 tags: [subsurface scattering, unity, shader, urp, hlsl]
 math: true
-image: "assets/img/sss-unity-6/Bust.png"
+image: "assets/img/sss-unity-6/Showcase/Dragon.png"
 ---
 
 This project is an implementation of Jorge Jimenez's artist-friendly separable model in my [**seminar research paper**](/research/#real-time-subsurface-scattering-a-comparative-analysis). As a result, this post will solely focus on its implementation in Unity 6 without diving too deep into the theory behind it. 
@@ -48,6 +48,12 @@ For multiple render targets, we simply write to more outputs: `SV_Target1`, `SV_
 
 Using [**this**]() PBR shader as a starting point, we can refactor the fragment output so each lighting component is written to its own colour target. 
 
+{% include add-image-with-caption.html
+   src="assets/img/sss-unity-6/ShaderBall/WIP/PBR.png"
+   alt="Unity Render"
+   caption="PBR Base"
+   max_width="1080px"
+%}
 
 >Since this shader supports multiple lighting models, each with its own settings, I use a custom `ShaderGUI` to keep the material inspector clean and only show the controls relevant to the selected model. The script for this can be found [**here**]().
 {:.prompt-info}
@@ -542,7 +548,12 @@ public class SSSSRenderPass : ScriptableRenderPass
 ```
 </details>
 
-------------- *Show diffuse, ambient and specular parts* -------------
+{% include add-image-with-caption.html
+   src="assets/img/sss-unity-6/ShaderBall/WIP/Ambient Diffuse Specular.png"
+   alt="Unity Render"
+   caption="Ambient, diffuse and specular components of our PBR material"
+   max_width="1080px"
+%}
 
 ---
 ## 2. Scattering the diffuse lighting
@@ -638,7 +649,7 @@ $$
 Here, we only consider a fixed number of samples $$N$$ on each side of the pixel $$u$$. The numerator sums them up and the denominator normalises them so that the brightness stays stable when we adjust the kernel parameters.
 
 As shown in section 4a and 4b in `SSSSRenderPass.cs`, this shader is used through a material `SSSSMaterial`. The convolution is performed twice: once for horizontal and once for vertical. The code remains the same, only the direction changes.
- 
+
 <details class="collapsible" markdown="1">
 <summary>
   <span class="collapsible-label">Show:</span>
@@ -748,7 +759,12 @@ Shader "bentoBAUX/SSSS Util/ArtistFriendlyKernel"
 ```
 </details>
 
-------------- *Show intermediate result* ------------- 
+{% include add-image-with-caption.html
+   src="assets/img/sss-unity-6/ShaderBall/WIP/SSS.png"
+   alt="Unity Render"
+   caption="Result after two 1D convolutions"
+   max_width="1080px"
+%}
 
 ---
 ## 3. Reconstructing the final image
@@ -934,6 +950,12 @@ Shader "bentoBAUX/SSSS Util/Compositor"
 
 There is one last RenderGraph detail in `SSSSRenderPass.cs`. We cannot safely read from the `resourceData.activeColorTexture` and write back into that same texture in the same pass. The `CompositeFrag()` therefore writes into a temporary output texture first. After that, we run `CopyFrag()` that copies this temporary result back into the active scene colour texture.
 
+{% include add-image-with-caption.html
+   src="assets/img/sss-unity-6/ShaderBall/WIP/Composite.png"
+   alt="Unity Render"
+   caption="Composite Result"
+   max_width="1080px"
+%}
 
 ## Bonus: Adding Transmission
 
@@ -1013,48 +1035,49 @@ float3 CalculateTransmittance(Surf surfaceData, Light lightData)
 ```
 </details>
 
-## Showcase
-
-#### Perseus
-
-This showcase uses the Perseus model by [**leofinearts**](https://sketchfab.com/3d-models/perseus-53d894b3cc184012afaa70f4b3b2ddce) on Sketchfab. The model is used here as a consistent sculptural test subject for comparing the skin, marble, jade and wax material presets.
-
-{% include slide-show.html
-  slides="
-  /assets/img/sss-unity-6/Perseus/Still/Skin.png | Perseus Skin ;
-  /assets/img/sss-unity-6/Perseus/Still/Marble.png | Perseus Marble ;
-  /assets/img/sss-unity-6/Perseus/Still/Jade.png | Perseus Jade ;
-  /assets/img/sss-unity-6/Perseus/Still/Wax.png | Perseus Wax ;
-  "
-  max_width="1920px"
-  dots="true"
-  autoplay="false"
+{% include add-image-with-caption.html
+   src="assets/img/sss-unity-6/ShaderBall/WIP/Transmission.png"
+   alt="Unity Render"
+   caption="Transmission with thickness of 15"
+   max_width="1080px"
 %}
+
+## Showcase
 
 #### Digital Human
 
-This showcase uses the free HD head model from [**3D Scan Store**](https://www.3dscanstore.com/blog/Free-3D-Head-Model) as a high-detail skin test subject. The asset includes head geometry, supporting facial meshes, and 8K texture maps, making it useful for evaluating subsurface scattering on realistic skin.
+I found this free HD head model from [**3D Scan Store**](https://www.3dscanstore.com/blog/Free-3D-Head-Model) as a high-detail skin test subject. The asset includes head geometry, supporting facial meshes, and 8K texture maps, making it useful for evaluating subsurface scattering on realistic skin.
+![Woman](../assets/img/sss-unity-6/Showcase/Woman-Side.png)
 
-![Woman](../assets/img/sss-unity-6/Woman/Woman.png)
+#### Jade Dragon
+
+Our material is also capable of modelling non-organic translucent materials. Here, we use the dragon model from [**Artec 3D**](https://sketchfab.com/3d-models/dragon-with-pearl-93d65f56fdd34311ad55112f90ba4a82) to demonstrate a jade-like scattering profile.
+![Jade Dragon](../assets/img/sss-unity-6/Showcase/Dragon.png)
+
+#### Rossbaendiger
+
+The Rossbändiger statue from [**noe-3d.at**](https://sketchfab.com/3d-models/rossbandiger-1c6197c72a4a4d5d9676ed15c2c35004) showcases subsurface scattering on a large marble surface.
+
+![Rossbaendiger](../assets/img/sss-unity-6/Showcase/Rossbaendiger.png)
+
+#### Cherub
+
+The cherub from [**Nom**](https://sketchfab.com/3d-models/photogrammetryretopology-cherub-668237aabbf54beeb347bbaa7be930c7) serves as a wax-like material study.
+![alt text](../assets/img/sss-unity-6/Showcase/Cherub.png)
 
 #### Parameter Study
-To make the behaviour of the shader easier to compare, each showcase keeps the scene, camera, lighting, and post-processing fixed. Only the demonstrated parameter changes between renders.
+To make the behaviour of the shader easier to compare, each showcase keeps the scene, camera, lighting, and post-processing fixed. Only the demonstrated parameter changes between renders. This is the material preset used for this study:
 
+| Parameter         | Value                    |
+| ----------------- | ------------------------ |
+| Subsurface Weight | 1.0                      |
+| Scatter Scale     | 10.0                     |
+| Near/Far Balance  | 0.25                     |
+| Near Sigma        | (0.35, 0.07, 0.035, 1.0) |
+| Far Sigma         | (1.0, 0.12, 0.10, 1.0)   |
+| Sample Count      | 32                       |
 
-##### Material Presets
-A comparison of several material presets using the same shaderball setup. Each material uses a different scattering profile to demonstrate how subsurface scattering affects a wide range of translucent surfaces. 
-
-A complete table containing all preset parameter values is provided after this showcase section.
-
-{% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/Different Materials.png"
-   alt="Material preset comparison"
-   caption="Comparing ketchup, jade, marble, skin and wax"
-   max_width="1920px"
-%}
-
-
-##### Subsurface Weight
+###### **Subsurface Weight**
 
 The subsurface weight controls the blend between the original diffuse lighting and the processed subsurface result. Lower values preserve the original surface shading, while higher values reveal more of the scattered diffuse contribution.
 
@@ -1062,11 +1085,11 @@ The subsurface weight controls the blend between the original diffuse lighting a
    src="../assets/img/sss-unity-6/ShaderBall/Subsurface Weight.png"
    alt="Subsurface weight comparison"
    caption="Subsurface Weight from 0.0 to 1.0"
-   max_width="1920px"
+   max_width="2860px"
 %}
 
 
-##### Scatter Scale
+###### **Scatter Scale**
 
 
 Scatter scale acts as a global multiplier for the scattering distances. Increasing it spreads the subsurface effect further across the surface.
@@ -1075,56 +1098,51 @@ Scatter scale acts as a global multiplier for the scattering distances. Increasi
    src="../assets/img/sss-unity-6/ShaderBall/Scatter Scale.png"
    alt="Scatter scale comparison"
    caption="Scatter Scale from 0.0 to 10.0"
-   max_width="1920px"
+   max_width="2860px"
 %}
 
-##### Near/Far Balance
+###### **Near/Far Balance**
 
-The near/far balance controls the blend between the short-range and long-range scattering profiles. Lower values favour broader far scattering, while higher values favour tighter near scattering.
+The near/far balance controls the blend between the short-range and long-range scattering profiles. Lower values favour broader far scattering, while higher values favour tighter near scattering. Here, the Near Sigma is set to (0.35, 0.07, 0.035) and the Far Sigma is set to (1.00, 0.12, 0.10).
 
 {% include add-image-with-caption.html
    src="../assets/img/sss-unity-6/ShaderBall/NFB.png"
    alt="Near far balance comparison"
    caption="Near/Far Balance from 0.0 to 1.0"
-   max_width="1920px"
+   max_width="2860px"
 %}
 
 
-##### Near Sigma
+###### **Near/Far Sigma**
 
-Near sigma controls the short-range scattering profile. This mainly affects local softness and how much small surface detail is preserved.
+Near/Far Sigma controls the scattering distance per colour channel. Lower values keep the material sharper and more surface-like, while higher values spread the diffuse lighting further across the surface, creating a softer and more translucent response.
 
 {% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/Near Sigma.png"
-   alt="Near sigma comparison"
-   caption="Near sigma values: (0.45, 0.55, 0.65), (0.8, 0.9, 1.0), (1.4, 1.6, 1.8)"
-   max_width="1920px"
+   src="../assets/img/sss-unity-6/ShaderBall/Sigma.png"
+   alt="Sigma comparison"
+   caption="Sigma values: (0.15, 0.03, 0.015), (0.35, 0.07, 0.035), (0.80, 0.16, 0.08)"
+   max_width="2860px"
 %}
 
-##### Far Sigma
+###### **Sample Count**
 
-Far sigma controls the long-range scattering profile. Higher values create broader diffusion and a softer, more translucent material response.
+Sample Count controls how many neighbours are sampled on each side of a pixel. Differences become increasingly subtle with higher sample counts.
 
 {% include add-image-with-caption.html
-   src="../assets/img/sss-unity-6/ShaderBall/Far Sigma.png"
-   alt="Far sigma comparison"
-   caption="Far sigma values: (1.8, 2.2, 2.5), (3.2, 3.8, 4.2), (5.5, 6.5, 7.2)"
-   max_width="1920px"
+   src="../assets/img/sss-unity-6/ShaderBall/StepCount.png"
+   alt="Sigma comparison"
+   caption="Sample Count from 0 to 64"
+   max_width="2860px"
 %}
-
-
-
-## Material Presets
 
 
 ## Limitations
 
 
-Preset part
 Limitation: this isnt a per object sss. it is one setting for all objects in the scene.
 ADD A LAYER CALLED SSSS
 NO FOG SUPPORT
-
+BETTER TO RENDER AN EXTRA FLAT COLOUR FOR MASK
 
 
 SHOWCASE:
