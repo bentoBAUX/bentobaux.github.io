@@ -11,7 +11,12 @@ image: "assets/img/sss-unity-6/Showcase/Dragon.png"
 
 This project is an implementation of Jorge Jimenez's artist-friendly separable model in my [**seminar research paper**](/research/#real-time-subsurface-scattering-a-comparative-analysis). As a result, this post will solely focus on its implementation in Unity 6 without diving too deep into the theory behind it. 
 
-The repository can be found [**here**]().
+
+Before we get started, here is a short demo reel showcasing the final results.
+
+{% include embed/youtube.html id='n5IeHShzeX4' %}
+
+The repository of this project can be found [**here**](https://github.com/bentoBAUX/Separable-Subsurface-Scattering-in-Unity-6).
 
 ---
 
@@ -46,7 +51,7 @@ In HLSL, this is done through the [**`SV_Target`**](https://learn.microsoft.com/
 
 For multiple render targets, we simply write to more outputs: `SV_Target1`, `SV_Target2`, and so on. Unity supports up to 8 colour targets in total, from `SV_Target0` to `SV_Target7`. In this implementation, we only need the first three for each of the lighting components.
 
-Using [**this**]() PBR shader as a starting point, we can refactor the fragment output so each lighting component is written to its own colour target. 
+Using [**this**](https://github.com/bentoBAUX/Separable-Subsurface-Scattering-in-Unity-6/blob/master/Assets/Shaders/PBR%20Master.shader) PBR shader as a starting point, we can refactor the fragment output so each lighting component is written to its own colour target. 
 
 {% include add-image-with-caption.html
    src="assets/img/sss-unity-6/ShaderBall/WIP/PBR.png"
@@ -55,7 +60,7 @@ Using [**this**]() PBR shader as a starting point, we can refactor the fragment 
    max_width="1080px"
 %}
 
->Since this shader supports multiple lighting models, each with its own settings, I use a custom `ShaderGUI` to keep the material inspector clean and only show the controls relevant to the selected model. The script for this can be found [**here**]().
+>Since this shader supports multiple lighting models, each with its own settings, I use a custom `ShaderGUI` to keep the material inspector clean and only show the controls relevant to the selected model. The script for this can be found [**here**](https://github.com/bentoBAUX/Separable-Subsurface-Scattering-in-Unity-6/blob/master/Assets/Scripts/GUI/PBRGUI.cs).
 {:.prompt-info}
 
 #### 1.1 Refactoring the fragment output
@@ -97,7 +102,7 @@ FragOutput frag(Varyings IN)
 }
 ```
 
-The same refactor also has to happen inside `LightLoop()` where each component of the lighting is accumulated in separate buckets. For the full shader changes, compare [**`SSSS Master.shader`**](...) with [**`PBR Master.shader`**](...).
+The same refactor also has to happen inside `LightLoop()` where each component of the lighting is accumulated in separate buckets. For the full shader changes, compare [**`SSSS Master.shader`**](https://github.com/bentoBAUX/Separable-Subsurface-Scattering-in-Unity-6/blob/master/Assets/Shaders/SSSS%20Master.shader) with [**`PBR Master.shader`**](https://github.com/bentoBAUX/Separable-Subsurface-Scattering-in-Unity-6/blob/master/Assets/Shaders/PBR%20Master.shader).
 
 #### 1.2 Creating the lighting buffers
 
@@ -105,7 +110,7 @@ By using the `SV_Target[i]` semantics, we have only labelled where each output s
 
 So far, only our diffuse output will render because `SV_Target0` is usually bound to the camera colour target in normal render passes. Since nothing stores the other specular and ambient lighting information, the other two colour targets won't be rendered.
 
-To fix this, we must create our own custom render pass that properly receives all three outputs as separate render textures. This can be done in Unity 6 by creating a custom [**`ScriptableRenderFeature`**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.3/api/UnityEngine.Rendering.Universal.ScriptableRendererFeature.html) with a [**`ScriptableRenderPass`**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.3/api/UnityEngine.Rendering.Universal.ScriptableRenderPass.html). A `ScriptableRenderFeature` is a component that can be added to a scriptable renderer like URP to modify how the scene is rendered. It configures and enqueues render passes that ~~contain the actual rendering work.~~ ***the shaders do <- improve explanation.***
+To fix this, we must create our own custom render pass that properly receives all three outputs as separate render textures. This can be done in Unity 6 by creating a custom [**`ScriptableRenderFeature`**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.3/api/UnityEngine.Rendering.Universal.ScriptableRendererFeature.html) with a [**`ScriptableRenderPass`**](https://docs.unity3d.com/Packages/com.unity.render-pipelines.universal@17.3/api/UnityEngine.Rendering.Universal.ScriptableRenderPass.html). A `ScriptableRenderFeature` is a component that can be added to a scriptable renderer like URP to modify how the scene is rendered. It configures and enqueues `ScriptableRenderPass` instances that execute the shaders responsible for the rendering work.
 
 > How to remember the difference?
 > {: .title}
@@ -130,7 +135,7 @@ Below are the exposed SSS settings, followed by the full code:
 | `nearFarBalance`   | `0.0 – 1.0`  | Blends between wide scattering and tight scattering. Lower values give softer, wider scattering. Higher values keep the effect closer to the original surface detail.           |
 | `nearSigma`        | `Vector4`    | Controls the tight scattering colour. This keeps the effect close to the original pixel and preserves sharper detail.                                                           |
 | `farSigma`         | `Vector4`    | Controls the wide scattering colour. This spreads light further and creates softer colour bleeding.                                                                             |
-| `stepCount`        | `int`        | Sets the number of samples used by the blur kernel.                                                                                                                             |
+| `sampleCount`      | `int`        | Sets the number of samples used by the blur kernel.                                                                                                                             |
 
 <details class="collapsible" markdown="1">
 <summary>
@@ -172,7 +177,7 @@ public class SSSSSettings
 
     // Number of samples used by the blur kernel.
     // Hidden because this is currently fixed internally rather than exposed as an artist setting.
-    public int stepCount = 32;
+    public int sampleCount = 32;
 }
 
 public class SSSSRenderFeature : ScriptableRendererFeature
@@ -241,7 +246,7 @@ The important part is the `ScriptableRenderPass`. This is where we actually crea
 
 In Unity 6, the `ScriptableRenderPass` workflow has changed slightly. In older URP versions, a custom pass usually meant giving Unity a sequence of rendering commands and manually managing temporary render textures yourself.
 
-With RenderGraph, we instead describe the pass through `RecordRenderGraph()`. Each pass declares which textures it reads from and writes to, allowing Unity to manage resource lifetimes, pass ordering, and optimisation more safely.
+With RenderGraph, we instead describe the pass through `RecordRenderGraph()`. Each pass declares which textures it reads from and writes to, allowing Unity to manage resource lifetimes, pass ordering, and optimisation more safely. To learn more, Unity has released a [**tutorial**](https://youtu.be/U8PygjYAF7A) on the basics of RenderGraph.
 
 For our SSS pipeline, the render pass has **six main parts**:
 
@@ -548,6 +553,8 @@ public class SSSSRenderPass : ScriptableRenderPass
 ```
 </details>
 
+##### **Result**
+
 {% include add-image-with-caption.html
    src="assets/img/sss-unity-6/ShaderBall/WIP/Ambient Diffuse Specular.png"
    alt="Unity Render"
@@ -577,7 +584,7 @@ G(r,\sigma)
 e^{-\frac{r^2}{2\sigma^2}}
 $$
 
-To keep the profile artist-controllable, I scale both Gaussian widths by a global scattering radius:
+To keep the profile artist-controllable, I scale both Gaussian widths by a global scattering factor:
 
 $$
 \sigma'_\text{near}
@@ -593,7 +600,9 @@ $$
 \cdot s
 $$
 
-where $$s = \text{_SSSS_ScatterScale}$$. The kernel then becomes:
+where $$s = \text{_SSSS_ScatterScale}$$. 
+
+The kernel then becomes:
 
 $$
 a(r)
@@ -617,7 +626,7 @@ which is represented implicitly in the code later by applying the same 1D convol
 
 Before we can write the code, we must firstly understand how the convolution works. 
 
-Again at a high level, convolution means that for each pixel, we look at nearby samples and give each one a weight. Each sample colour is multiplied by its weight, and all weighted samples are then summed together to produce the new colour of the current pixel. Samples close to the centre usually contribute more, while samples further away contribute less. For our SSS blur, those weights come from the artist-friendly kernel described above.
+Again at a high level, convolution means that for each pixel, we look at nearby samples and give each one a weight. Each sample colour is multiplied by its weight, and all weighted samples are then summed together to produce the new colour of the current pixel. Samples close to the centre usually contribute more, while samples further away contribute less. For our SSS blur, **those weights come from the artist-friendly kernel described above.**
 
 For one horizontal or vertical pass, we can write the continuous 1D convolution as:
 
@@ -628,7 +637,7 @@ M_e(u)
 E(u')a(u-u')\,du'
 $$
 
-This looks scary but it just means: to compute the new diffuse colour $$M_e(u)$$, we add up infinitely many neighbouring colours. Each neighbour is multiplied by a scattering weight from the kernel $$a$$, based on how far that neighbour is from $$u$$. 
+This looks scary but it just means: to compute the new diffuse colour $$M_e(u)$$, we add up **infinitely** many neighbouring colours. Each neighbour is multiplied by a scattering weight from the kernel $$a$$, based on how far that neighbour is from $$u$$. 
 
 This makes sense because light can enter at one point of a material like skin, scatter internally, and exit somewhere nearby. The final colour at a point depends on the light received by its surrounding neighbours too.
 
@@ -758,6 +767,8 @@ Shader "bentoBAUX/SSSS Util/ArtistFriendlyKernel"
 }
 ```
 </details>
+
+##### **Result**
 
 {% include add-image-with-caption.html
    src="assets/img/sss-unity-6/ShaderBall/WIP/SSS.png"
@@ -948,7 +959,9 @@ Shader "bentoBAUX/SSSS Util/Compositor"
 ```
 </details>
 
-There is one last RenderGraph detail in `SSSSRenderPass.cs`. We cannot safely read from the `resourceData.activeColorTexture` and write back into that same texture in the same pass. The `CompositeFrag()` therefore writes into a temporary output texture first. After that, we run `CopyFrag()` that copies this temporary result back into the active scene colour texture.
+There is one last RenderGraph detail in `SSSSRenderPass.cs`. We cannot safely read from the `resourceData.activeColorTexture` and write back into that same texture in the same pass. The `CompositeFrag()` therefore writes into a temporary output texture first. After that, we run `CopyFrag()` that copies this temporary result back into the active scene colour texture in section 6.
+
+##### **Result**
 
 {% include add-image-with-caption.html
    src="assets/img/sss-unity-6/ShaderBall/WIP/Composite.png"
@@ -961,13 +974,12 @@ There is one last RenderGraph detail in `SSSSRenderPass.cs`. We cannot safely re
 
 At this point, the screen-space SSS pipeline is working. However, this only handles light scattering across the visible surface. It **does not include backlighting effect** you often see around ears, fingers, or thin skin regions. That kind of effect depends on light travelling through the object, which our screen-space blur does not know about.
 
-To approximate this, I added a simple backlighting term directly in `SSSS Master.shader`, based on Jorge Jimenez’s translucency approximation from his [**website**](https://www.iryoku.com/translucency/?utm_source=openai). Instead of using his original falloff directly, I adapted it into a custom sigma-driven falloff so the transmission response stays consistent with our near/far SSS profile.
+To approximate this, I added a simple backlighting term directly in `SSSS Master.shader`, based on Jorge Jimenez’s translucency approximation from his [**website**](https://www.iryoku.com/translucency/?utm_source=openai). Instead of using his original transmittance profile `T()` directly, I adapted it to stay consistent with our near/far SSS profile.
 
-**`CalculateTransmittance()` should be added to the diffuse buffer of the master shader.**
 
-> Only add it to the diffuse buffer!
+> Only add `CalculateTransmittance()` to the diffuse buffer!
 > {: .title}
-> The transmittance term must be written into the diffuse buffer before the SSS blur pass. This is intentional: backlighting represents light that has entered the material and should therefore be softened by the same subsurface diffusion as the rest of the diffuse lighting. If it is added later in the composite pass, it will stay sharp and pasted-on, which breaks the illusion of light travelling through the surface.
+> The transmittance term **must be written into the diffuse buffer** in `SSSS Master.shader` before the SSS blur pass. This is intentional: backlighting represents light that has entered the material and should therefore be softened by the same subsurface diffusion as the rest of the diffuse lighting. If it is added later in the composite pass, it will stay sharp and pasted-on, which breaks the illusion of light travelling through the surface.
 {: .box-warning}
 <details class="collapsible" markdown="1">
 <summary>
@@ -989,18 +1001,36 @@ float _SSSS_SubsurfaceWeight;
 float3 GetTransmissionDistance()
 {
     float balance = saturate(_SSSS_NearFarBalance);
+
     float3 nearDistance = max(_SSSS_NearSigma * _SSSS_ScatterScale, 0.0001);
     float3 farDistance = max(_SSSS_FarSigma * _SSSS_ScatterScale, 0.0001);
 
     return lerp(farDistance, nearDistance, balance);
 }
 
-// Sigma-driven transmission.
-// Larger sigma means that colour channel survives through more thickness.
-// This falloff is based on Beer-Lambert's Law
+// Beer-Lambert-style transmission.
+//
+// Physical form:
+//
+//     T = exp(-sigma_t * d)
+//
+// where sigma_t is the extinction coefficient and d is the travelled distance
+// through the material.
+//
+// Note: sigma_t is different from _SSSS_NearSigma or _SSSS_FarSigma.
+// In this shader, NearSigma and FarSigma are reused from the Gaussian blur
+// controls and treated as artist-friendly transmission distances D:
+
+//     D = 1 / sigma_t
+//     D = NearSigma/FarSigma * ScatterScale
+//     T = exp(-d / D)
+//
+// This means larger NearSigma/FarSigma values cause slower attenuation,
+// while a larger physical sigma_t would cause faster attenuation.
 float3 ArtistTransmissionProfile(float thickness)
 {
     float3 distanceRGB = GetTransmissionDistance();
+
     float3 transmission = exp(-thickness / distanceRGB);
 
     return saturate(transmission);
@@ -1024,16 +1054,24 @@ float3 CalculateTransmittance(Surf surfaceData, Light lightData)
     float3 L = normalize(lightData.direction);
 
     float backLight = saturate((dot(-N, L) + 0.3) / (1.0 + 0.3));
+
     float lightAtten = lightData.distanceAttenuation;
+
     float s = surfaceData.thickness;
+
     float scaleAmount = GetTransmissionScaleAmount();
+
     float3 transmittance = ArtistTransmissionProfile(s) * lightData.color * lightAtten * surfaceData.baseColor.rgb * backLight;
 
     return transmittance * scaleAmount * saturate(_SSSS_SubsurfaceWeight);
 }
 #endif
+
+#endif
 ```
 </details>
+
+##### **Result**
 
 {% include add-image-with-caption.html
    src="assets/img/sss-unity-6/ShaderBall/WIP/Transmission.png"
@@ -1054,7 +1092,7 @@ I found this free HD head model from [**3D Scan Store**](https://www.3dscanstore
 Our material is also capable of modelling non-organic translucent materials. Here, we use the dragon model from [**Artec 3D**](https://sketchfab.com/3d-models/dragon-with-pearl-93d65f56fdd34311ad55112f90ba4a82) to demonstrate a jade-like scattering profile.
 ![Jade Dragon](../assets/img/sss-unity-6/Showcase/Dragon.png)
 
-#### Rossbaendiger
+#### Rossbändiger
 
 The Rossbändiger statue from [**noe-3d.at**](https://sketchfab.com/3d-models/rossbandiger-1c6197c72a4a4d5d9676ed15c2c35004) showcases subsurface scattering on a large marble surface.
 
@@ -1068,14 +1106,18 @@ The cherub from [**Nom**](https://sketchfab.com/3d-models/photogrammetryretopolo
 #### Parameter Study
 To make the behaviour of the shader easier to compare, each showcase keeps the scene, camera, lighting, and post-processing fixed. Only the demonstrated parameter changes between renders. This is the material preset used for this study:
 
-| Parameter         | Value                    |
-| ----------------- | ------------------------ |
-| Subsurface Weight | 1.0                      |
-| Scatter Scale     | 10.0                     |
-| Near/Far Balance  | 0.25                     |
-| Near Sigma        | (0.35, 0.07, 0.035, 1.0) |
-| Far Sigma         | (1.0, 0.12, 0.10, 1.0)   |
-| Sample Count      | 32                       |
+<div align="center" markdown="1">
+
+|     Parameter     |          Value           |
+| :---------------: | :----------------------: |
+| Subsurface Weight |           1.0            |
+|   Scatter Scale   |           10.0           |
+| Near/Far Balance  |           0.25           |
+|    Near Sigma     | (0.35, 0.07, 0.035, 1.0) |
+|     Far Sigma     |  (1.0, 0.12, 0.10, 1.0)  |
+|   Sample Count    |            32            |
+
+</div>
 
 ###### **Subsurface Weight**
 
@@ -1135,19 +1177,39 @@ Sample Count controls how many neighbours are sampled on each side of a pixel. D
    max_width="2860px"
 %}
 
-
 ## Limitations
 
+This implementation is intentionally focused on a clean real-time SSSS pipeline rather than a full production-ready material system. The main limitations are:
 
-Limitation: this isnt a per object sss. it is one setting for all objects in the scene.
-ADD A LAYER CALLED SSSS
-NO FOG SUPPORT
-BETTER TO RENDER AN EXTRA FLAT COLOUR FOR MASK
+- **Scene-wide SSS Settings**: The current implementation only allows one global SSS profile for all SSS objects.
 
+- **SSSS Layer Requirement**: Objects that should receive subsurface scattering must be assigned to a dedicated `SSSS` layer. Not ideal for larger production environments where some objects layer assignments may already be reserved for gameplay, rendering, culling, or other engine systems.
 
-SHOWCASE:
+- **No Fog Support**: The current compositor does not fully support fog integration. Since the SSS result is reconstructed after the custom diffuse blur, fog would need to be applied consistently after recomposition, or handled explicitly in each intermediate lighting buffer.
 
-setup: perseus/woman model with randomly moving lights.
-show: showcase sss with diff materials. for perseus we do skin, wax, marble, jade. woman is just woman with diff skin tones.
-documentation: use shader ball to showcase Scatter Weight, Scatter Scale, RGB Scatter Distances, Sample Count, Performance.
+- **Masking Accuracy**: The current implementation derives the SSS mask from the diffuse buffer. This works, but visible mask boundaries can appear in fully shadowed regions when the subsurface weight is set to 0. This happens because of the `step()` function that creates binary transitions. A quick and cheap solution is to use `smoothstep()` which softens the transition and reduces harsh cut-offs, but it does not solve the underlying issue. A cleaner solution would be to render a separate unlit mask for SSS objects into an additional `SV_Target`, so the compositor can identify SSS pixels independently of the lighting result.
 
+{% include add-image-with-caption.html
+   src="../assets/img/sss-unity-6/ShaderBall/HarshBoundary.png"
+   alt="Harsh Boundary"
+   caption="The hard threshold produced by `step()` (left) creates visible artefacts in completely shadowed regions, while `smoothstep()`(right) softens the boundary and reduces the artefact."
+   max_width="2860px"
+%}
+
+## Conclusion
+
+Completing this project and its devlog took about a semester and a half. It started as seminar research on real-time subsurface scattering and eventually developed into a full implementation in Unity 6. The goal was to find out if URP could support high-quality real-time subsurface scattering, similar to the material quality seen in Blender EEVEE, through a custom pipeline. Despite the limitations, I am pleased with how it turned out. 
+
+{% include compare-slider.html
+   before="assets/img/sss-unity-6/Showcase/Blender-Logo.png"
+   after="assets/img/sss-unity-6/Showcase/Unity-Logo.png"
+   alt_before="Blender"
+   alt_after="Unity"
+   start=45
+   max_width="1920px"
+   caption="Comparison between Blender EEVEE's Christensen-Burley SSS and my custom SSSS in Unity 6 URP."
+%}
+
+If time allows, I would love to turn this devlog into a more detailed tutorial on YouTube. There were many finer details that could not be covered here without making the devlog too long. Let me know in the comments if that is something you would like to see, or if you have any questions about the implementation.
+
+Thank you for reading, and I hope this devlog was useful to anyone interested in real-time subsurface scattering or custom rendering in Unity.

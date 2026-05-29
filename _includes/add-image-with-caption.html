@@ -25,14 +25,13 @@
       margin-bottom: 1rem;
       color: var(--text-muted, #666);
     }
-    
 </style>
 
 <div class="fig-wrap" style="max-width: {{ max_w }};">
   <img src="{{ src }}" alt="{{ alt }}">
 </div>
 {% if caption != '' %}
-  <div class="ba-caption">{{ caption }}</div>
+  <div class="ba-caption">{{ caption | markdownify }}</div>
 {% endif %}
 
 {% comment %}
