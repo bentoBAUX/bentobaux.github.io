@@ -1,6 +1,6 @@
 ---
 ---
-
+// Error if it is ' production '
 @use 'main
 {%- if jekyll.environment == 'production' -%}
   .bundle
